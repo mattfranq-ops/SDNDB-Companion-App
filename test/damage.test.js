@@ -114,3 +114,31 @@ describe("health and DR cap", () => {
     expect(cappedArmorDR(lv1)).toBe(4);
   });
 });
+
+import { findCondition, defaultRounds, kiFluxResult, exhaustionPenalty, inKiExhaustion, CONDITION_LIBRARY } from "../renderer/engine/conditions.js";
+
+describe("conditions", () => {
+  it("has every 5.0 condition from the Ch.1 list", () => {
+    const book = ["Boosted (Body)", "Bulk", "Enraged", "Dead", "Gigantification", "Hyper Mode", "Rescaled (Maxi)", "Rescaled (Mini)",
+      "Weighted (Light)", "Weighted (Heavy)", "Altered (Older)", "Altered (Younger)", "Barrier Strain", "Berserk", "Impaled", "Ki-Flux",
+      "Pinned", "Reactively Charged", "Suspended", "Wounded", "Crippled", "Dazed", "Disabled", "Embedded", "Frozen in Time"];
+    for (const n of book) expect(findCondition(n), n).toBeTruthy();
+    expect(new Set(CONDITION_LIBRARY.map(c => c.name)).size).toBe(CONDITION_LIBRARY.length);
+  });
+  it("fills in the book's durations", () => {
+    expect(defaultRounds(findCondition("hyper mode"), { kiRank: 3 })).toBe(6);
+    expect(defaultRounds(findCondition("Embedded"), { inflicterRank: 2 })).toBe(3);
+    expect(defaultRounds(findCondition("Disabled"))).toBe(10);
+    expect(defaultRounds(findCondition("Pinned"))).toBeNull();
+  });
+  it("reads the Ki-Flux table", () => {
+    expect(kiFluxResult(2, 3)).toMatch(/\+9 Ki/);
+    expect(kiFluxResult(4)).toMatch(/Con save/);
+    expect(kiFluxResult(6)).toMatch(/Minor/);
+  });
+  it("applies Exhaustion and Ki Exhaustion", () => {
+    expect(exhaustionPenalty({ vitals: { exhaustion: 3 } })).toBe(-6);
+    expect(inKiExhaustion({ ki: 0, maxKi: 30, temp: { ki: 0 } })).toBe(true);
+    expect(inKiExhaustion({ ki: 0, maxKi: 30, temp: { ki: 5 } })).toBe(false);
+  });
+});

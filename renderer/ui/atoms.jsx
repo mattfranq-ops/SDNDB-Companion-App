@@ -186,7 +186,7 @@ function CommaNumInput({ value, onValue, style, ...rest }) {
     onFocus={e => { e.target.select(); rest.onFocus?.(e); }} style={{ ...inputStyle, ...(style||{}) }} />;
 }
 function Tag({ children, color = COLORS.dim, onRemove }) {
-  return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, background: `${color}1F`, color, border: `1px solid ${color}55`, borderRadius: 3, padding: "2px 8px", letterSpacing: 0.3, marginRight: 5, marginBottom: 5 }}>{children}{onRemove && <X size={11} style={{ cursor: "pointer" }} onClick={onRemove} />}</span>;
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, background: `${color}1F`, color, border: `1px solid ${color}55`, borderRadius: 3, padding: "2px 8px", letterSpacing: 0.3, marginRight: 5, marginBottom: 5 }}>{children}{onRemove && <button type="button" onClick={onRemove} aria-label="Remove" title="Remove" style={{ display: "inline-flex", background: "none", border: "none", padding: 0, color: "inherit", cursor: "pointer" }}><X size={11} /></button>}</span>;
 }
 // Hover to reveal on desktop, tap to toggle on mobile — used for feature/technique descriptions.
 function InfoChip({ label, description, color = COLORS.blue, sub }) {

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Check, ChevronRight, Crosshair, Dices, Eye, EyeOff, HeartPulse, Plus, Radio, RotateCcw, Skull, Sparkles, Swords, Trash2, Users, Wand2, X } from "lucide-react";
 import { useLocalOption } from "../../state/local-options.js";
 import { deviceId, emitNav, emitRoll, logSession, rollsPrivate, setRollsPrivate } from "../../app/bus.js";
-import { abilityMod, activeFormUpkeep, effectivePowerBonus, statMod } from "../../engine/core.js";
-import { HEALTH_LABEL, damagePatch, deathSave, healthState, overloadDamage, spendPatch, totalDR } from "../../engine/damage.js";
+import { abilityMod, activeFormUpkeep, charTotalLevel, computeKiRank, effectivePowerBonus, statMod } from "../../engine/core.js";
+import { HEALTH_LABEL, damagePatch, deathSave, grantTempPatch, healthState, overloadDamage, spendPatch, totalDR } from "../../engine/damage.js";
+import { CONDITION_GROUPS, CONDITION_LIBRARY, defaultRounds, findCondition, kiFluxResult } from "../../engine/conditions.js";
 import { computeSaveBonus } from "../../engine/skills.js";
 import { computeOverload } from "../../engine/derived.js";
 import { computeAC } from "../../engine/equipment.js";
@@ -15,6 +16,20 @@ import { COLORS, FONTS } from "../../ui/theme.js";
 import { ApplyPanel, DyingPanel, StatStepper, blankCombatant } from "./combat-parts.jsx";
 import { advanceTime, readTime } from "./time.jsx";
 
+// Sheet toggles (Hyper Mode, Enraged, Boosted …) to switch off when these
+// condition names leave a row, unless another copy is still on it.
+function sheetTogglesOff(src, removedNames, remaining) {
+  if (!src) return null;
+  const still = new Set(remaining.map(x => (typeof x === "string" ? x : x.text).toLowerCase()));
+  const ac = { ...(src.activeConditions || {}) };
+  let changed = false;
+  for (const name of removedNames) {
+    const def = findCondition(name);
+    if (def && def.sheet && ac[def.sheet] && !still.has(def.name.toLowerCase())) { ac[def.sheet] = false; changed = true; }
+  }
+  return changed ? { activeConditions: ac } : null;
+}
+
 const DEATH_SAVE_TEXT = { revived: "natural 20, back up at 1 HP", stable: "third success, Stable", success: "success", fail: "failure", dead: "third failure, dead" };
 
 function InitiativeTab() {
@@ -23,6 +38,7 @@ function InitiativeTab() {
   const [newName, setNewName] = useState("");
   const [tagInputs, setTagInputs] = useState({});
   const [tagRounds, setTagRounds] = useState({});   // optional round timer per condition
+  const [tagRanks, setTagRanks] = useState({});     // inflicter's Ki Rank, for conditions that scale with it
   const [chars, persistChars] = useSharedList("characters_v2");
   const [npcs, persistNpcs] = useSharedList("npcs_v2");
   const [timeState, persistTime] = useSharedList("session_time");
@@ -66,6 +82,34 @@ function InitiativeTab() {
     else if (c.sourceType === "npc" && npcs && persistNpcs) persistNpcs(npcs.map(e => e.id===c.sourceId ? { ...e, ...pool } : e));
   };
   const removeCombatant = (id) => save({ combatants: data.combatants.filter(c => c.id !== id) });
+
+  // Conditions from the book get their name, default duration and the
+  // inflicter's Ki Rank; ones that map to a sheet toggle (Hyper Mode, Enraged,
+  // Boosted …) switch it on for a linked fighter so its Power applies.
+  const writeSheet = (c, patch) => {
+    if (!patch || !c.sourceId) return;
+    if (c.sourceType === "player" && chars && persistChars) persistChars(chars.map(e => e.id === c.sourceId ? { ...e, ...patch } : e));
+    else if (c.sourceType === "npc" && npcs && persistNpcs) persistNpcs(npcs.map(e => e.id === c.sourceId ? { ...e, ...patch } : e));
+  };
+  const addCondition = (c) => {
+    const typed = (tagInputs[c.id] || "").trim();
+    if (!typed) return;
+    const def = findCondition(typed);
+    const src = sourceOf(c);
+    const inflicterRank = def && def.needsRank ? Math.max(1, Number(tagRanks[c.id]) || 1) : undefined;
+    const kiRank = src && c.sourceType === "player" ? computeKiRank(src) : 1;
+    const rounds = tagRounds[c.id] ? Number(tagRounds[c.id]) : defaultRounds(def, { kiRank, inflicterRank: inflicterRank || 1 });
+    const entry = { text: def ? def.name : typed, rounds, ...(inflicterRank ? { inflicterRank } : {}) };
+    save({ combatants: data.combatants.map(x => x.id === c.id ? { ...x, conditions: [...x.conditions, entry] } : x) });
+    if (def && def.sheet && src) writeSheet(c, { activeConditions: { ...(src.activeConditions || {}), [def.sheet]: true } });
+    setTagInputs(t => ({ ...t, [c.id]: "" })); setTagRounds(t => ({ ...t, [c.id]: "" })); setTagRanks(t => ({ ...t, [c.id]: "" }));
+  };
+  const removeCondition = (c, i) => {
+    const gone = c.conditions[i];
+    const rest = c.conditions.filter((_, j) => j !== i);
+    save({ combatants: data.combatants.map(x => x.id === c.id ? { ...x, conditions: rest } : x) });
+    writeSheet(c, sheetTogglesOff(sourceOf(c), [typeof gone === "string" ? gone : gone.text], rest));
+  };
 
   // --- Targeting: hand off to the fighter's own sheet (Slice 1c) ------------
   // The acting fighter jumps to their Combat tab to roll their real attack. The
@@ -122,6 +166,14 @@ function InitiativeTab() {
     // A completed round is 6 seconds of in world time (10 rounds = 1 minute).
     if (wrap && persistTime) persistTime([advanceTime(readTime(timeState), 6)]);
 
+    // Sheet writes collected here and saved once at the end.
+    const charPatches = {}, npcPatches = {};
+    const patchSource = (row, patch) => {
+      if (!row || !row.sourceId) return;
+      const bag = row.sourceType === "player" ? charPatches : row.sourceType === "npc" ? npcPatches : null;
+      if (bag) bag[row.sourceId] = { ...(bag[row.sourceId] || {}), ...patch };
+    };
+
     const ending = sorted[data.turn % sorted.length];
     if (ending && ending.conditions && ending.conditions.length) {
       const expired = [];
@@ -135,7 +187,11 @@ function InitiativeTab() {
         } else next.push(cd);
       }
       combatants = combatants.map(c => c.id === ending.id ? { ...c, conditions: next } : c);
-      if (expired.length) logSession(`${ending.name}: ${expired.join(", ")} ended`, ending.name);
+      if (expired.length) {
+        logSession(`${ending.name}: ${expired.join(", ")} ended`, ending.name);
+        const off = sheetTogglesOff(sourceOf(ending), expired, next);
+        if (off) patchSource(ending, off);
+      }
     }
 
     const nowActive = sorted[newTurn];
@@ -148,7 +204,35 @@ function InitiativeTab() {
       const addCondition = (text, rounds) => {
         combatants = combatants.map(c => c.id === nowActive.id ? { ...c, conditions: [...(c.conditions || []), { text, rounds }] } : c);
       };
+      const rowConds = ((combatants.find(c => c.id === nowActive.id) || {}).conditions || []).map(x => typeof x === "string" ? { text: x, rounds: null } : x);
+      const hasCond = (name) => rowConds.some(x => x.text.toLowerCase() === name.toLowerCase());
       if (src && (src.blocking || src.wildSense)) merge({ blocking: false, wildSense: false });
+      // Suspended ends as the turn starts (p.16).
+      if (hasCond("Suspended")) {
+        combatants = combatants.map(c => c.id === nowActive.id ? { ...c, conditions: c.conditions.filter(x => (typeof x === "string" ? x : x.text).toLowerCase() !== "suspended") } : c);
+        notes.push("Suspended ends, falls if nothing holds them up");
+      }
+      // Boosted (Body): Temporary HP equal to Character Level, replacing any already there (p.12).
+      if (hasCond("Boosted (Body)") || (src && (src.activeConditions || {}).boostedBody)) {
+        const lvl = nowActive.sourceType === "player" && src ? charTotalLevel(src) : (subject.level || 1);
+        merge(grantTempPatch(cur, "hp", lvl));
+        notes.push(`+${lvl} Temp HP (Boosted Body)`);
+      }
+      // Impaled: Ki Damage 12 × the inflicter's Ki Rank, before Upkeep (p.15).
+      for (const x of rowConds.filter(x => x.text.toLowerCase() === "impaled")) {
+        const amt = 12 * (x.inflicterRank || 1);
+        merge(damagePatch(cur, amt, "ki").patch);
+        notes.push(`−${amt} Ki (Impaled)`);
+      }
+      // Ki-Flux: d6 for this turn (p.16).
+      for (const x of rowConds.filter(x => x.text.toLowerCase() === "ki-flux")) {
+        const d6 = roll(6);
+        notes.push(`Ki-Flux ${d6}: ${kiFluxResult(d6, x.inflicterRank || 1)}`);
+      }
+      // Class resources that refresh every turn.
+      if (src && nowActive.sourceType === "player" && (src.resources || []).some(r => r.reset === "turn" && r.current < r.max)) {
+        merge({ resources: src.resources.map(r => r.reset === "turn" ? { ...r, current: r.max } : r) });
+      }
 
       const conscious = (cur.hp || 0) > 0;
       if (src && conscious) {
@@ -190,20 +274,36 @@ function InitiativeTab() {
       }
 
       const changed = {};
-      for (const k of ["hp", "ki", "temp", "deathSaves", "dead", "stable", "blocking", "wildSense"]) {
+      for (const k of ["hp", "ki", "temp", "deathSaves", "dead", "stable", "blocking", "wildSense", "resources"]) {
         if (JSON.stringify(cur[k]) !== JSON.stringify(subject[k])) changed[k] = cur[k];
       }
       if (Object.keys(changed).length) {
-        if (src && nowActive.sourceType === "player" && chars && persistChars) persistChars(chars.map(e => e.id === src.id ? { ...e, ...changed } : e));
-        else if (src && nowActive.sourceType === "npc" && npcs && persistNpcs) persistNpcs(npcs.map(e => e.id === src.id ? { ...e, ...changed } : e));
-        const mirror = Object.fromEntries(Object.entries(changed).filter(([k]) => k !== "blocking" && k !== "wildSense"));
+        patchSource(nowActive, changed);
+        const mirror = Object.fromEntries(Object.entries(changed).filter(([k]) => ["hp", "ki", "temp", "deathSaves", "dead", "stable"].includes(k)));
         combatants = combatants.map(c => c.id === nowActive.id ? { ...c, ...mirror } : c);
       }
       if (notes.length) logSession(`${nowActive.name} start of turn: ${notes.join(" · ")}`, nowActive.name);
     }
+    if (Object.keys(charPatches).length && chars && persistChars) persistChars(chars.map(e => charPatches[e.id] ? { ...e, ...charPatches[e.id] } : e));
+    if (Object.keys(npcPatches).length && npcs && persistNpcs) persistNpcs(npcs.map(e => npcPatches[e.id] ? { ...e, ...npcPatches[e.id] } : e));
     save({ turn: newTurn, round: newRound, combatants });
   };
-  const resetCombat = () => save({ round: 1, turn: 0, combatants: [] });
+
+  // Ending the encounter refreshes per-encounter class resources and clears
+  // the sheet toggles the tracker switched on.
+  const resetCombat = () => {
+    const ids = new Set(data.combatants.filter(c => c.sourceType === "player" && c.sourceId).map(c => c.sourceId));
+    if (ids.size && chars && persistChars) {
+      persistChars(chars.map(e => {
+        if (!ids.has(e.id)) return e;
+        const row = data.combatants.find(c => c.sourceId === e.id);
+        const off = sheetTogglesOff(e, (row?.conditions || []).map(x => typeof x === "string" ? x : x.text), []) || {};
+        const resources = (e.resources || []).map(r => r.reset === "encounter" ? { ...r, current: r.max } : r);
+        return { ...e, ...off, resources, blocking: false, wildSense: false };
+      }));
+    }
+    save({ round: 1, turn: 0, combatants: [] });
+  };
 
   // --- Pull real fighters into the tracker (Slice 1a) -----------------------
   // Combatants carry sourceId/sourceType so their pools can sync back to the
@@ -237,6 +337,9 @@ function InitiativeTab() {
 
   return (
     <div>
+      <datalist id="sdndbz-condition-list">
+        {CONDITION_GROUPS.flatMap(g => CONDITION_LIBRARY.filter(d => d.group === g).map(d => <option key={d.name} value={d.name}>{g}</option>))}
+      </datalist>
       {error && <ErrorBanner text={error} />}
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         <TextInput placeholder="Combatant name..." value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==="Enter" && addCombatant()} style={{ maxWidth: 200 }} />
@@ -349,15 +452,26 @@ function InitiativeTab() {
                   {view.temp && view.temp.hp > 0 && !concealed && <Tag color={COLORS.green}>+{view.temp.hp} Temp HP</Tag>}
                   {src && src.blocking && <Tag color={COLORS.blue}>Blocking</Tag>}
                   {ov && ov.over > 0 && <Tag color={COLORS.amber}>⚠ Overload +{ov.over} · {ov.damage} dmg/turn</Tag>}
-                  {c.conditions.map((cond,i) => { const cd = typeof cond === "string" ? { text: cond, rounds: null } : cond; return (
-                    <Tag key={i} color={cd.rounds != null ? COLORS.amber : COLORS.purple} onRemove={() => updateCombatant(c.id, { conditions: c.conditions.filter((_,j) => j!==i) })}>{cd.text}{cd.rounds != null ? ` · ${cd.rounds}r` : ""}</Tag>
+                  {c.conditions.map((cond,i) => { const cd = typeof cond === "string" ? { text: cond, rounds: null } : cond; const def = findCondition(cd.text); return (
+                    <span key={i} title={def ? `${def.name} (${def.group}): ${def.text}` : undefined}>
+                      <Tag color={cd.rounds != null ? COLORS.amber : def && def.group === "Beneficial" ? COLORS.green : COLORS.purple} onRemove={() => removeCondition(c, i)}>{cd.text}{cd.inflicterRank ? ` (KR ${cd.inflicterRank})` : ""}{cd.rounds != null ? ` · ${cd.rounds}r` : ""}</Tag>
+                    </span>
                   ); })}
-                  {(() => { const addCond = () => { const text = (tagInputs[c.id]||"").trim(); if (!text) return; const r = tagRounds[c.id] ? Number(tagRounds[c.id]) : null; updateCombatant(c.id, { conditions: [...c.conditions, { text, rounds: r }] }); setTagInputs(t => ({...t,[c.id]:""})); setTagRounds(t => ({...t,[c.id]:""})); }; return (<>
-                    <input placeholder="+ condition" value={tagInputs[c.id]||""} onChange={e => setTagInputs(t => ({...t,[c.id]:e.target.value}))} onKeyDown={e => e.key==="Enter" && addCond()}
-                      style={{ background: "transparent", border: "none", outline: "none", color: COLORS.muted, fontSize: 11.5, width: 80 }} />
-                    <input type="number" placeholder="rds" value={tagRounds[c.id]||""} onChange={e => setTagRounds(t => ({...t,[c.id]:e.target.value}))} onKeyDown={e => e.key==="Enter" && addCond()} title="Rounds until it expires (optional)"
-                      style={{ background: "transparent", border: `1px solid ${COLORS.border}`, borderRadius: 5, outline: "none", color: COLORS.muted, fontSize: 11, width: 40, textAlign: "center", padding: "2px 0" }} />
-                  </>); })()}
+                  {(() => {
+                    const typed = (tagInputs[c.id] || "").trim();
+                    const def = findCondition(typed);
+                    return (<>
+                      <input placeholder="+ condition" list="sdndbz-condition-list" value={tagInputs[c.id]||""} onChange={e => setTagInputs(t => ({...t,[c.id]:e.target.value}))} onKeyDown={e => e.key==="Enter" && addCondition(c)}
+                        title={def ? def.text : "Pick from the book's conditions or type your own"}
+                        style={{ background: "transparent", border: "none", outline: "none", color: COLORS.muted, fontSize: 11.5, width: 110 }} />
+                      {def && def.needsRank && (
+                        <input type="number" placeholder="KR" value={tagRanks[c.id]||""} onChange={e => setTagRanks(t => ({...t,[c.id]:e.target.value}))} onKeyDown={e => e.key==="Enter" && addCondition(c)} title="Ki Rank of whoever inflicted it"
+                          style={{ background: "transparent", border: `1px solid ${COLORS.amber}66`, borderRadius: 5, outline: "none", color: COLORS.muted, fontSize: 11, width: 38, textAlign: "center", padding: "2px 0" }} />
+                      )}
+                      <input type="number" placeholder={def && defaultRounds(def, { kiRank: 1, inflicterRank: 1 }) != null ? "auto" : "rds"} value={tagRounds[c.id]||""} onChange={e => setTagRounds(t => ({...t,[c.id]:e.target.value}))} onKeyDown={e => e.key==="Enter" && addCondition(c)} title="Rounds until it expires (optional; book durations fill in automatically)"
+                        style={{ background: "transparent", border: `1px solid ${COLORS.border}`, borderRadius: 5, outline: "none", color: COLORS.muted, fontSize: 11, width: 40, textAlign: "center", padding: "2px 0" }} />
+                    </>);
+                  })()}
                 </div>
                 {applyId === c.id && <ApplyPanel row={c} onClose={() => setApplyId("")} />}
                 {!concealed && view.hp <= 0 && view.maxHp > 0 && <DyingPanel c={view} onUpdate={(patch) => updateCombatant(c.id, patch)} />}

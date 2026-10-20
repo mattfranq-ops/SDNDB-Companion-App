@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight, Crosshair, Dices, Flame, Plus, Swords, Trash2, X, Zap } from "lucide-react";
 import { emitRoll } from "../../app/bus.js";
+import { exhaustionPenalty, exhaustionRanks, inKiExhaustion } from "../../engine/conditions.js";
 import { drIgnoredBy, spendPatch } from "../../engine/damage.js";
 import { applyToCombatant } from "../session/apply.js";
 import { STAT_MOD_LABEL, activeConditionPower, activeFormPower, benefitsOfPower, charTotalLevel, computeKiRank, effectivePowerBonus, profBonusForLevel, statMod, totalPowerBonus } from "../../engine/core.js";
@@ -187,7 +188,8 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     if (mv.resolution === "attack") {
       const r = rollD20(rollMode);
       const d20 = r.die;
-      head = { kind: "attack", d20, atk, situ, env: envAtk, mode: r.mode, rolls: r.rolls, hit: d20 + atk + situ + envAtk };
+      const exh = exhaustionPenalty(char);
+      head = { kind: "attack", d20, atk, situ, env: envAtk, exh, mode: r.mode, rolls: r.rolls, hit: d20 + atk + situ + envAtk + exh };
       // A natural 20 is a Critical Hit: roll the damage dice again and add them.
       if (d20 === 20 && dmg && parsed) {
         const extra = rollDice({ ...parsed, mod: 0 });
@@ -232,7 +234,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     const landedOnTarget = head.kind === "attack" && head.outcome;
     const bannerColor = landedOnTarget ? (head.landed ? COLORS.red : COLORS.dim) : head.kind === "attack" ? COLORS.blue : head.kind === "save" ? COLORS.gold : COLORS.muted;
     const dieText = head.kind === "attack" ? (head.mode !== "normal" ? `d20 ${rollModeLabel(head.mode)} [${head.rolls.join(", ")}] ${head.d20}` : `d20 ${head.d20}`) : "";
-    const headDetail = head.kind === "attack" ? `${dieText} ${atk >= 0 ? "+" : ""}${atk}${head.situ ? ` ${head.situ >= 0 ? "+" : ""}${head.situ}` : ""}${head.env ? ` ${head.env >= 0 ? "+" : ""}${head.env} mod` : ""} → hit ${head.hit}`
+    const headDetail = head.kind === "attack" ? `${dieText} ${atk >= 0 ? "+" : ""}${atk}${head.situ ? ` ${head.situ >= 0 ? "+" : ""}${head.situ}` : ""}${head.env ? ` ${head.env >= 0 ? "+" : ""}${head.env} mod` : ""}${head.exh ? ` ${head.exh} Exhaustion` : ""} → hit ${head.hit}`
       : head.kind === "save" ? `DC ${head.dc}${head.ability ? ` ${head.ability.slice(0, 3)}` : ""}` : "";
     emitRoll({
       label: landedOnTarget ? `${mv.name} → ${head.targetName}` : mv.name,
@@ -290,6 +292,18 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {inKiExhaustion(char) && (
+        <div role="alert" style={{ background: `${COLORS.purple}14`, border: `1px solid ${COLORS.purple}55`, borderRadius: 8, padding: "9px 12px", fontSize: 12.5, lineHeight: 1.5 }}>
+          <b style={{ color: COLORS.purple }}>Ki Exhaustion.</b> No Techniques, Basic Ki Blasts or Heroic Feats; no form or Proficiency AC bonus;
+          no Ascend, Awaken, Ramp Up, Shine or Power Strike; one Snap Decision per round. Gather Ki to get out of it.
+        </div>
+      )}
+      {exhaustionRanks(char) > 0 && (
+        <div style={{ background: `${COLORS.amber}12`, border: `1px solid ${COLORS.amber}44`, borderRadius: 8, padding: "7px 12px", fontSize: 12.5 }}>
+          <b style={{ color: COLORS.amber }}>Exhaustion {exhaustionRanks(char)}</b>: {exhaustionPenalty(char)} on every d20 roll (already in your rolls), −{5 * exhaustionRanks(char)} ft speed.
+          {exhaustionRanks(char) >= 6 ? " Six ranks is death." : " A Long Rest removes one rank."}
+        </div>
+      )}
       {combatTarget && (
         <div style={{ background: `${COLORS.red}14`, border: `1px solid ${COLORS.red}55`, borderRadius: 8, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
           <Crosshair size={15} color={COLORS.red} />

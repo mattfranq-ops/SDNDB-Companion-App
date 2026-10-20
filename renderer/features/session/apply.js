@@ -45,6 +45,7 @@ async function applyToCombatant(combatantId, opts) {
   const pool = opts.pool || "hp";
 
   let patch, amount, steps = [];
+  if (opts.kind === "heal" && pool === "hp" && target.dead) return { ok: false, reason: `${row.name} is dead. Revive them first.` };
   if (opts.kind === "heal") {
     const r = healPatch(target, opts.amount, pool);
     patch = r.patch; amount = r.gained;

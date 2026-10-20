@@ -8,6 +8,7 @@ import { NPC_POOLS } from "../../data/name-pools.js";
 import { HERITAGE_DATA } from "../../data/species-data.js";
 import { charClasses, charTotalLevel, computeKiRank, computeMaxStamina, profBonusForLevel, statMod } from "../../engine/core.js";
 import { computeAttacksPerTurn, featsOwed, techniquesKnownBudget } from "../../engine/derived.js";
+import { exhaustionPenalty } from "../../engine/conditions.js";
 import { classGrantedResources } from "../../engine/resources.js";
 import { SKILL_LIST, STAT_KEYS, computeSaveBonus, computeSkillBonus, speciesByName, speciesSkillData } from "../../engine/skills.js";
 import { alignmentAuraColor } from "../../engine/spellcasting.js";
@@ -335,10 +336,13 @@ function SkillsSavesTab({ char, set }) {
     set({ skillProfs: { ...cur, [skillName]: next } });
   };
   // CPR pattern: the modifier IS the roll button — tap it to roll d20 + bonus.
-  const rollCheck = (label, bonus) => {
+  // Exhaustion takes 2 per rank off every d20 test (book p.9).
+  const rollCheck = (label, base) => {
     const d20 = roll(20);
+    const exh = exhaustionPenalty(char);
+    const bonus = base + exh;
     setLog(prev => [{ id: uid(), label, d20, bonus, total: d20 + bonus }, ...prev].slice(0, 8));
-    emitRoll({ label, total: d20 + bonus, detail: `d20 ${d20} ${bonus >= 0 ? "+" : ""}${bonus}`, color: COLORS.blue, share: true, who: char.name || "" });
+    emitRoll({ label, total: d20 + bonus, detail: `d20 ${d20} ${base >= 0 ? "+" : ""}${base}${exh ? ` ${exh} Exhaustion` : ""}`, color: COLORS.blue, share: true, who: char.name || "" });
   };
   const rollBtn = (label, value, color) => (
     <button onClick={e => { e.stopPropagation(); rollCheck(label, value); }} title={`Roll d20 ${value >= 0 ? "+" : ""}${value}`}

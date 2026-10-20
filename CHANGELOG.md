@@ -24,6 +24,19 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   rolls the Wisdom save against Dazed.
 - Timed conditions now count down at the end of their owner's turn.
 - Ki and Stamina costs spend Temporary points first.
+- **Conditions from the book:** the tracker's condition box suggests all 45 conditions (the 5.0
+  list plus the 5e basics) with their rules on hover. Book durations fill in on their own
+  (Hyper Mode 2 × Ki Rank, Embedded inflicter's Ki Rank + 1, Disabled 1 minute, Dazed and
+  Enraged one turn), and Impaled, Ki-Flux, Embedded and Reactively Charged ask for the
+  inflicter's Ki Rank.
+- Conditions with a sheet toggle (Hyper Mode, Enraged, the seven Boosted) switch it on for a
+  linked fighter, so their Power applies, and off again when they end.
+- Start of turn also runs Impaled (Ki Damage before Upkeep), Ki-Flux (rolls the d6 and says
+  what it does), Boosted (Body) (Temp HP equal to level) and Suspended (ends), and refreshes
+  per-turn class resources. Ending the encounter refreshes per-encounter ones.
+- Exhaustion takes 2 per rank off attack rolls, checks, saves and spell attacks, and the
+  Combat tab warns about Exhaustion and Ki Exhaustion.
+- A condition tag's remove control is now a real button (keyboard and screen readers).
 
 **Fixed**
 - An open character sheet ignored changes made elsewhere at the table (damage, Upkeep) and
