@@ -16,7 +16,35 @@ const NAV = [
    toast that auto-fades or can be dismissed with X. Settings live per-device in
    localStorage and are edited in Compendium → Options. ===== */
 const _rollBannerSubs = new Set();
-function emitRoll(payload) { _rollBannerSubs.forEach(fn => { try { fn(payload); } catch { /* ignore */ } }); }
+function emitRoll(payload) {
+  _rollBannerSubs.forEach(fn => { try { fn(payload); } catch { /* ignore */ } });
+  if (payload && payload.share) shareRoll(payload);
+}
+
+/* ===== Shared roll log — rolls made on a sheet also land in the table's
+   Session → Rolls log (key "session_rolls"), so the DM sees every roll the way
+   the Cyberpunk RED Companion's online session does. A device can roll
+   privately: those entries are shown only in DM view and on the device that
+   rolled them. ===== */
+const DEVICE_KEY = "sdndbz_device_v1";
+const ROLL_PRIVATE_KEY = "sdndbz_roll_private_v1";
+function deviceId() {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY);
+    if (!id) { id = uid(); localStorage.setItem(DEVICE_KEY, id); }
+    return id;
+  } catch { return "local"; }
+}
+function rollsPrivate() { try { return localStorage.getItem(ROLL_PRIVATE_KEY) === "1"; } catch { return false; } }
+function setRollsPrivate(on) { try { localStorage.setItem(ROLL_PRIVATE_KEY, on ? "1" : "0"); } catch { /* ignore */ } }
+async function shareRoll({ label, total, detail, who }) {
+  try {
+    let list = [];
+    try { const r = await window.storage.get("session_rolls", true); list = JSON.parse(r.value) || []; } catch { /* first roll */ }
+    const entry = { id: uid(), time: Date.now(), kind: "sheet", label: label || "", total: total ?? "", detail: detail || "", who: who || "", private: rollsPrivate(), device: deviceId() };
+    await window.storage.set("session_rolls", JSON.stringify([entry, ...list].slice(0, 80)), true);
+  } catch { /* not at a table */ }
+}
 
 // Navigation bus — lets the Session tracker jump the acting fighter to their own
 // sheet (Combat/Features/Magic), optionally carrying a target. Same pub/sub shape
@@ -45,6 +73,9 @@ export {
   NAV,
   _rollBannerSubs,
   emitRoll,
+  deviceId,
+  rollsPrivate,
+  setRollsPrivate,
   _navSubs,
   _pendingNav,
   emitNav,

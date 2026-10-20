@@ -338,7 +338,7 @@ function SkillsSavesTab({ char, set }) {
   const rollCheck = (label, bonus) => {
     const d20 = roll(20);
     setLog(prev => [{ id: uid(), label, d20, bonus, total: d20 + bonus }, ...prev].slice(0, 8));
-    emitRoll({ label, total: d20 + bonus, detail: `d20 ${d20} ${bonus >= 0 ? "+" : ""}${bonus}`, color: COLORS.blue });
+    emitRoll({ label, total: d20 + bonus, detail: `d20 ${d20} ${bonus >= 0 ? "+" : ""}${bonus}`, color: COLORS.blue, share: true, who: char.name || "" });
   };
   const rollBtn = (label, value, color) => (
     <button onClick={e => { e.stopPropagation(); rollCheck(label, value); }} title={`Roll d20 ${value >= 0 ? "+" : ""}${value}`}

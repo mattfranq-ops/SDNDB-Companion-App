@@ -36,9 +36,15 @@ _Last updated 2026-10-20, after the 2.0 remaster._
 
 ## Next up
 
-Compare the app against the **5.0 Beta Document** (514 pages: rules, character creation,
-species and heritages, 18 classes, downtime and training, forms, customization/feats,
-techniques) and build what's missing. That list lives in the project thread.
+Two reports in the project's shared files say what's left:
+
+- `sdnd/companion-comparison.md` compares the app with the Cyberpunk RED Companion and lists
+  every Ch.1 rule the table still does by hand. Pass 1 of its plan (damage, shared rolls,
+  death saves, start of turn) is done; `engine/damage.js` holds those rules and
+  `test/damage.test.js` pins them. Pass 2 is the full condition list with timers and
+  start-of-turn effects; pass 3 is the sheet (backstory, technique charges, table backup).
+- `sdnd/5.0-feature-gaps.md` lists the 5.0 book content that's missing or wrong, starting with
+  the class tables.
 
 ## Tips for whoever picks this up
 

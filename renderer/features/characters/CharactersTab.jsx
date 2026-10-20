@@ -57,7 +57,18 @@ function CharacterEditorSimple({ char, onChange, onDelete, onClose }) {
     if (attacks !== local.attacksPerTurn) setLocal(prev => ({ ...prev, attacksPerTurn: attacks }));
   }, [JSON.stringify(local.classes), local.classId, local.level]);
 
-  useEffect(() => { onChange(local); /* eslint-disable-next-line */ }, [local]);
+  // Write local edits out, and remember what we sent. When the table changes
+  // this character from somewhere else (damage from the tracker, Upkeep, a
+  // heal from the DM) the stored copy stops matching what we sent: take it,
+  // so the next local edit can't write the old HP back over it.
+  // Our own writes echo back from the server a moment later, so recent sends
+  // are kept and ignored when they come back.
+  const sentRef = useRef([]);
+  useEffect(() => { sentRef.current = [JSON.stringify(local), ...sentRef.current].slice(0, 30); onChange(local); /* eslint-disable-next-line */ }, [local]);
+  useEffect(() => {
+    if (!char || !sentRef.current.length) return;
+    if (!sentRef.current.includes(JSON.stringify(char))) setLocal(migrateChar(char));
+  }, [char]);
   const importFile = (e) => {
     const f = e.target.files[0]; if (!f) return;
     const reader = new FileReader();

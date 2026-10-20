@@ -4,6 +4,7 @@ import { CONDITIONS_DATA, activeForms, benefitsOfPower, charClasses, charTotalLe
 import { cyberneticKiControlPenalty, cyberneticLimit, cyberneticsUsed, installedParts } from "../../engine/cybernetics.js";
 import { computeAttacksPerTurn, computeCarryWeight, computeOverload, computePassives, computePowerLevel, computeTechRefs, powerDR } from "../../engine/derived.js";
 import { computeAC, computeArmorDR, computeWeighted, equippedEntries } from "../../engine/equipment.js";
+import { totalDR } from "../../engine/damage.js";
 import { SKILL_LIST, STAT_KEYS, computeSaveBonus, computeSkillBonus } from "../../engine/skills.js";
 import { activeAura, isCaster, spellStats } from "../../engine/spellcasting.js";
 import { gravAcclimRanks, gravityColor } from "../../engine/universe.js";
@@ -41,7 +42,7 @@ function ScouterSheet({ char }) {
   const power = computePowerLevel(char, houseRules.powerSystem);
   const pas = computePassives(char);
   const ac = computeAC(char);
-  const dr = (char.drOverride === true ? (char.dr || 0) : computeArmorDR(char)) + powerDR(char);
+  const dr = totalDR(char);
   const bop = benefitsOfPower(char);
   const eff = effectivePowerBonus(char);
   const over = computeOverload(char);

@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Check, ChevronRight, Crosshair, Dices, Eye, EyeOff, Plus, Radio, RotateCcw, Skull, Sparkles, Swords, Trash2, Users, Wand2, X } from "lucide-react";
+import { Check, ChevronRight, Crosshair, Dices, Eye, EyeOff, HeartPulse, Plus, Radio, RotateCcw, Skull, Sparkles, Swords, Trash2, Users, Wand2, X } from "lucide-react";
 import { useLocalOption } from "../../state/local-options.js";
-import { emitNav, emitRoll, logSession } from "../../app/bus.js";
-import { abilityMod, activeFormUpkeep, statMod } from "../../engine/core.js";
-import { computeOverload, powerDR } from "../../engine/derived.js";
-import { computeAC, computeArmorDR } from "../../engine/equipment.js";
+import { deviceId, emitNav, emitRoll, logSession, rollsPrivate, setRollsPrivate } from "../../app/bus.js";
+import { abilityMod, activeFormUpkeep, effectivePowerBonus, statMod } from "../../engine/core.js";
+import { HEALTH_LABEL, damagePatch, deathSave, healthState, overloadDamage, spendPatch, totalDR } from "../../engine/damage.js";
+import { computeSaveBonus } from "../../engine/skills.js";
+import { computeOverload } from "../../engine/derived.js";
+import { computeAC } from "../../engine/equipment.js";
 import { isCaster } from "../../engine/spellcasting.js";
 import { roll, uid } from "../../lib/dice.js";
 import { CURRENT_HOUSE_RULES, envDmgPerTurn, envKiCostMult, useSharedList } from "../../state/hooks.js";
 import { Btn, ConfirmBtn, EmptyState, ErrorBanner, LoadingBlock, Tag, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
-import { DyingPanel, StatStepper, blankCombatant } from "./combat-parts.jsx";
+import { ApplyPanel, DyingPanel, StatStepper, blankCombatant } from "./combat-parts.jsx";
 import { advanceTime, readTime } from "./time.jsx";
+
+const DEATH_SAVE_TEXT = { revived: "natural 20, back up at 1 HP", stable: "third success, Stable", success: "success", fail: "failure", dead: "third failure, dead" };
 
 function InitiativeTab() {
   const [state, persist, error] = useSharedList("session_combat");
@@ -25,6 +29,7 @@ function InitiativeTab() {
   const [picker, setPicker] = useState(null);   // "players" | "npcs" | null
   const [sel, setSel] = useState({});            // id -> true, staged in the picker
   const [atkId, setAtkId] = useState("");        // armed attacker (click a row to target)
+  const [applyId, setApplyId] = useState("");    // row with the damage / heal panel open
   // Per-device view. Players see teammate resources but not enemy (NPC) ones;
   // the DM sees everything and can reveal specific enemies.
   const [sessionView, setSessionView] = useLocalOption("sdndbz_session_view_v1", { mode: "player" });
@@ -48,7 +53,7 @@ function InitiativeTab() {
     const list = c.sourceType === "player" ? (chars || []) : (npcs || []);
     return list.find(e => e.id === c.sourceId) || null;
   };
-  const POOL_FIELDS = ["hp", "maxHp", "ki", "maxKi", "stamina", "maxStamina"];
+  const POOL_FIELDS = ["hp", "maxHp", "ki", "maxKi", "stamina", "maxStamina", "temp", "deathSaves", "dead", "stable"];
   const updateCombatant = (id, patch) => {
     save({ combatants: data.combatants.map(c => c.id===id?{...c,...patch}:c) });
     // Write pool changes through to the linked sheet so damage/Ki stays in step.
@@ -91,16 +96,23 @@ function InitiativeTab() {
   const goToSheet = (c, sheetTab) => { if (canAct(c)) emitNav({ tab: navTabFor(c), entityId: c.sourceId, sheetTab, target: null }); };
   const armAttacker = (id) => setAtkId(id);
 
-  // --- Per-turn costs (Slice 2a) -------------------------------------------
-  // When a fighter's turn comes up they pay for staying powered: active-form Ki
-  // upkeep, plus Overload self-damage (Overload is a cost, not a power cap).
-  // Computed from the linked player sheet; deductions sync back to it + log.
+  // Flat damage strings from hazards: "2d6+1" or "5".
   const rollDestruction = (s) => {
     const m = String(s).match(/(\d*)d(\d+)([+-]\d+)?/i);
     if (m) { let t = 0; const cnt = +(m[1] || 1); for (let i = 0; i < cnt; i++) t += roll(+m[2]); return t + (+(m[3] || 0)); }
     const flat = String(s).match(/^\s*(\d+)/); return flat ? +flat[1] : 0;
   };
+
+  // --- Turn order: end of the old turn, start of the new one ----------------
+  // Timed conditions count down at the END of their owner's turn, so "1 round"
+  // from an enemy lasts through your next turn, and "until the start of your
+  // next turn" effects you gain at the start of your turn cover that turn.
+  // The start of a turn runs the book's start-of-turn steps (Ch.1) on the
+  // linked sheet: Block / Wild Sense end, Upkeep is paid (Temporary Ki first),
+  // Overload deals Destruction Damage and forces the Wisdom save against
+  // Dazed, Harsh Galaxies hazards hit, and anyone at 0 HP rolls a Death Save.
   const nextTurn = () => {
+    if (!sorted.length) return;
     const n = data.turn + 1;
     const wrap = n >= sorted.length;
     const newTurn = wrap ? 0 : n;
@@ -110,51 +122,84 @@ function InitiativeTab() {
     // A completed round is 6 seconds of in world time (10 rounds = 1 minute).
     if (wrap && persistTime) persistTime([advanceTime(readTime(timeState), 6)]);
 
-    // Round tick (Slice 2b) — timed conditions count down and expire.
-    if (wrap) {
+    const ending = sorted[data.turn % sorted.length];
+    if (ending && ending.conditions && ending.conditions.length) {
       const expired = [];
-      combatants = combatants.map(c => {
-        if (!c.conditions || !c.conditions.length) return c;
-        const next = [];
-        for (const raw of c.conditions) {
-          const cd = typeof raw === "string" ? { text: raw, rounds: null } : raw;
-          if (cd.rounds != null) {
-            const rr = cd.rounds - 1;
-            if (rr <= 0) { expired.push(`${c.name}: ${cd.text}`); continue; }
-            next.push({ ...cd, rounds: rr });
-          } else next.push(cd);
-        }
-        return { ...c, conditions: next };
-      });
-      if (expired.length) logSession(`Expired — ${expired.join(" · ")}`);
+      const next = [];
+      for (const raw of ending.conditions) {
+        const cd = typeof raw === "string" ? { text: raw, rounds: null } : raw;
+        if (cd.rounds != null) {
+          const rr = cd.rounds - 1;
+          if (rr <= 0) { expired.push(cd.text); continue; }
+          next.push({ ...cd, rounds: rr });
+        } else next.push(cd);
+      }
+      combatants = combatants.map(c => c.id === ending.id ? { ...c, conditions: next } : c);
+      if (expired.length) logSession(`${ending.name}: ${expired.join(", ")} ended`, ending.name);
     }
 
-    // Per-turn costs (Slice 2a) on the newly-active fighter — players AND NPCs.
     const nowActive = sorted[newTurn];
     const src = nowActive ? sourceOf(nowActive) : null;
-    if (src) {
-      let upkeep = 0, hpLost = 0, envDmg = 0;
-      try { upkeep = activeFormUpkeep(src) || 0; } catch { /* no forms */ }
-      try { const ov = computeOverload(src); hpLost = ov.over > 0 && ov.damage ? rollDestruction(ov.damage) : 0; } catch { /* no overload model */ }
-      // Environmental effect hooks (Harsh Galaxies): a Ki field scales form upkeep,
-      // and damage-per-turn hazards (poison, radiation) chip HP each turn.
+    const subject = src || nowActive;
+    if (subject) {
+      const notes = [];
+      let cur = { ...subject };
+      const merge = (patch) => { cur = { ...cur, ...patch }; };
+      const addCondition = (text, rounds) => {
+        combatants = combatants.map(c => c.id === nowActive.id ? { ...c, conditions: [...(c.conditions || []), { text, rounds }] } : c);
+      };
+      if (src && (src.blocking || src.wildSense)) merge({ blocking: false, wildSense: false });
+
+      const conscious = (cur.hp || 0) > 0;
+      if (src && conscious) {
+        // Upkeep is only paid while conscious (p.8).
+        let upkeep = 0;
+        try { upkeep = activeFormUpkeep(src) || 0; } catch { /* no forms */ }
+        if (CURRENT_HOUSE_RULES.harshGalaxies && upkeep > 0) upkeep = Math.round(upkeep * envKiCostMult());
+        if (upkeep > 0) {
+          const paid = spendPatch(cur, "ki", upkeep);
+          merge(paid || { ki: 0, temp: { ...(cur.temp || { hp: 0, ki: 0, stamina: 0 }), ki: 0 } });
+          notes.push(paid ? `−${upkeep} Ki upkeep` : `couldn't cover ${upkeep} Ki upkeep`);
+        }
+        // Overload: Destruction Damage, then a Wisdom save (DC 10 + Power) or Dazed.
+        let ov = null;
+        try { ov = computeOverload(src); } catch { /* no overload model */ }
+        if (ov && ov.over > 0) {
+          const hurt = overloadDamage(ov.over);
+          merge(damagePatch(cur, hurt).patch);
+          const bonus = nowActive.sourceType === "player" ? computeSaveBonus(src, "wis").value : abilityMod(src.stats?.wis ?? 10);
+          const dc = 10 + effectivePowerBonus(src);
+          const d20 = roll(20);
+          const passed = d20 + bonus >= dc;
+          notes.push(`−${hurt} HP Overload (Destruction)`);
+          notes.push(`Wis save ${d20 + bonus} vs DC ${dc}: ${passed ? "held on" : "Dazed"}`);
+          if (!passed) addCondition("Dazed", 1);
+        }
+      }
+      // Environmental effect hooks (Harsh Galaxies): poison, radiation and the like.
       if (CURRENT_HOUSE_RULES.harshGalaxies) {
-        if (upkeep > 0) upkeep = Math.round(upkeep * envKiCostMult());
+        let envDmg = 0;
         for (const f of envDmgPerTurn()) envDmg += rollDestruction(f);
+        if (envDmg > 0) { merge(damagePatch(cur, envDmg).patch); notes.push(`−${envDmg} HP environment`); }
       }
-      const hpDrain = hpLost + envDmg;
-      if (upkeep > 0 || hpDrain > 0) {
-        const newKi = Math.max(0, (src.ki || 0) - upkeep);
-        const newHp = Math.max(0, (src.hp || 0) - hpDrain);
-        if (nowActive.sourceType === "player" && chars && persistChars) persistChars(chars.map(e => e.id === src.id ? { ...e, ki: newKi, hp: newHp } : e));
-        else if (nowActive.sourceType === "npc" && npcs && persistNpcs) persistNpcs(npcs.map(e => e.id === src.id ? { ...e, ki: newKi, hp: newHp } : e));
-        combatants = combatants.map(c => c.id === nowActive.id ? { ...c, ki: newKi, hp: newHp } : c);
-        const notes = [];
-        if (upkeep > 0) notes.push(`−${upkeep} Ki upkeep`);
-        if (hpLost > 0) notes.push(`−${hpLost} HP overload`);
-        if (envDmg > 0) notes.push(`−${envDmg} HP environment`);
-        logSession(`${nowActive.name} start of turn: ${notes.join(" · ")}`, nowActive.name);
+      // At 0 HP and not yet Stable: the Death Save happens now (p.25).
+      if ((cur.hp || 0) <= 0 && !cur.dead && !cur.stable && (cur.maxHp || 0) > 0) {
+        const ds = deathSave(cur);
+        merge(ds.patch);
+        notes.push(`Death Save ${ds.d20}: ${DEATH_SAVE_TEXT[ds.outcome]}`);
       }
+
+      const changed = {};
+      for (const k of ["hp", "ki", "temp", "deathSaves", "dead", "stable", "blocking", "wildSense"]) {
+        if (JSON.stringify(cur[k]) !== JSON.stringify(subject[k])) changed[k] = cur[k];
+      }
+      if (Object.keys(changed).length) {
+        if (src && nowActive.sourceType === "player" && chars && persistChars) persistChars(chars.map(e => e.id === src.id ? { ...e, ...changed } : e));
+        else if (src && nowActive.sourceType === "npc" && npcs && persistNpcs) persistNpcs(npcs.map(e => e.id === src.id ? { ...e, ...changed } : e));
+        const mirror = Object.fromEntries(Object.entries(changed).filter(([k]) => k !== "blocking" && k !== "wildSense"));
+        combatants = combatants.map(c => c.id === nowActive.id ? { ...c, ...mirror } : c);
+      }
+      if (notes.length) logSession(`${nowActive.name} start of turn: ${notes.join(" · ")}`, nowActive.name);
     }
     save({ turn: newTurn, round: newRound, combatants });
   };
@@ -171,7 +216,7 @@ function InitiativeTab() {
     hp: c.hp ?? c.maxHp ?? 20, maxHp: c.maxHp ?? 20,
     ki: c.ki ?? 0, maxKi: c.maxKi ?? 0,
     stamina: c.stamina ?? 0, maxStamina: c.maxStamina ?? 0,
-    dr: (c.drOverride === true ? (c.dr || 0) : computeArmorDR(c)) + powerDR(c),
+    dr: totalDR(c),
   });
   const combatantFromNpc = (n) => ({
     ...blankCombatant(), name: n.name, sourceId: n.id, sourceType: "npc",
@@ -257,7 +302,9 @@ function InitiativeTab() {
             // Linked rows read their pools live from the source sheet; overload
             // is a player-only readout (needs the character's Forms/Power).
             const src = sourceOf(c);
-            const view = src ? { ...c, hp: src.hp, maxHp: src.maxHp, ki: src.ki, maxKi: src.maxKi, stamina: src.stamina, maxStamina: src.maxStamina } : c;
+            const view = src ? { ...c, hp: src.hp, maxHp: src.maxHp, ki: src.ki, maxKi: src.maxKi, stamina: src.stamina, maxStamina: src.maxStamina, temp: src.temp, deathSaves: src.deathSaves || c.deathSaves, dead: !!src.dead, stable: !!src.stable } : c;
+            // Bloodied / Critical are announced to everyone, even when enemy HP is hidden (p.13).
+            const health = healthState(view.hp || 0, view.maxHp || 0);
             const ov = (c.sourceType === "player" && src) ? computeOverload(src) : null;
             const linkLost = c.sourceId && !src && (c.sourceType === "player" ? chars : npcs) !== null;
             const isAttacker = atkId === c.id;
@@ -292,11 +339,15 @@ function InitiativeTab() {
                           <Btn size="sm" variant="ghost" disabled={!caster} title={caster ? "Cast a spell" : "No spellcasting — not a caster"} onClick={() => caster && goToSheet(c, "magic")} style={{ opacity: caster ? 1 : 0.4, cursor: caster ? "pointer" : "not-allowed" }}><Wand2 size={14} color={caster ? COLORS.purple : COLORS.dim}/></Btn>
                         ); })()}
                       </>)}
+                  <Btn size="sm" variant="ghost" title="Apply damage or healing" onClick={() => setApplyId(applyId === c.id ? "" : c.id)}><HeartPulse size={14} color={applyId === c.id ? COLORS.gold : COLORS.red}/></Btn>
                   <Btn size="sm" variant="ghost" onClick={() => removeCombatant(c.id)}><Trash2 size={13} color={COLORS.red}/></Btn>
                 </div>
                 <div style={{ gridColumn: "2 / 8", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4 }}>
                   {c.sourceId && !linkLost && <Tag color={c.sourceType === "player" ? COLORS.blue : COLORS.dim}>{c.sourceType === "player" ? "Linked · syncs to sheet" : "Linked NPC"}</Tag>}
                   {linkLost && <Tag color={COLORS.dim}>source removed</Tag>}
+                  {health && !view.dead && <Tag color={health === "bloodied" ? COLORS.amber : COLORS.red}>{view.stable && health === "down" ? "Stable" : HEALTH_LABEL[health]}</Tag>}
+                  {view.temp && view.temp.hp > 0 && !concealed && <Tag color={COLORS.green}>+{view.temp.hp} Temp HP</Tag>}
+                  {src && src.blocking && <Tag color={COLORS.blue}>Blocking</Tag>}
                   {ov && ov.over > 0 && <Tag color={COLORS.amber}>⚠ Overload +{ov.over} · {ov.damage} dmg/turn</Tag>}
                   {c.conditions.map((cond,i) => { const cd = typeof cond === "string" ? { text: cond, rounds: null } : cond; return (
                     <Tag key={i} color={cd.rounds != null ? COLORS.amber : COLORS.purple} onRemove={() => updateCombatant(c.id, { conditions: c.conditions.filter((_,j) => j!==i) })}>{cd.text}{cd.rounds != null ? ` · ${cd.rounds}r` : ""}</Tag>
@@ -308,7 +359,8 @@ function InitiativeTab() {
                       style={{ background: "transparent", border: `1px solid ${COLORS.border}`, borderRadius: 5, outline: "none", color: COLORS.muted, fontSize: 11, width: 40, textAlign: "center", padding: "2px 0" }} />
                   </>); })()}
                 </div>
-                {!concealed && view.hp <= 0 && <DyingPanel c={c} onUpdate={(patch) => updateCombatant(c.id, patch)} />}
+                {applyId === c.id && <ApplyPanel row={c} onClose={() => setApplyId("")} />}
+                {!concealed && view.hp <= 0 && view.maxHp > 0 && <DyingPanel c={view} onUpdate={(patch) => updateCombatant(c.id, patch)} />}
                 {isTargetable && (
                   <div onClick={() => handOff(c)} title={`Attack ${c.name}`}
                     onMouseEnter={e => { e.currentTarget.style.background = `${COLORS.red}22`; e.currentTarget.style.borderColor = COLORS.red; }}
@@ -378,32 +430,51 @@ function RevivifyTool() {
   );
 }
 
+// The table's shared roll log. Manual rolls from here and every roll made on
+// a sheet (moves, skills, saves, spells) land in it. A device set to roll
+// privately only shows its rolls to itself and to DM view.
 function RollsTab() {
-  const [log, persist] = useSharedList("session_rolls");
+  const [log] = useSharedList("session_rolls");
   const [expr, setExpr] = useState("1d20");
+  const [priv, setPriv] = useState(rollsPrivate);
+  const [sessionView] = useLocalOption("sdndbz_session_view_v1", { mode: "player" });
+  const isDM = sessionView.mode === "dm";
   if (log === null) return <LoadingBlock />;
+  const me = deviceId();
   const doRoll = () => {
     const m = expr.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
     if (!m) return;
     const count = parseInt(m[1]||"1",10), sides = parseInt(m[2],10), mod = parseInt(m[3]||"0",10);
     const rolls = Array.from({length: count}, () => roll(sides));
     const total = rolls.reduce((a,b)=>a+b,0) + mod;
-    persist([{ id: uid(), expr, rolls, mod, total, time: Date.now() }, ...log].slice(0,50));
-    emitRoll({ label: expr, total, detail: `[${rolls.join(", ")}]${mod ? ` ${mod >= 0 ? "+" : ""}${mod}` : ""}`, color: COLORS.gold });
+    emitRoll({ label: expr, total, detail: `[${rolls.join(", ")}]${mod ? ` ${mod >= 0 ? "+" : ""}${mod}` : ""}`, color: COLORS.gold, share: true });
   };
+  const togglePriv = () => { setRollsPrivate(!priv); setPriv(!priv); };
+  const shown = log.filter(r => !r.private || isDM || r.device === me);
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <TextInput value={expr} onChange={e => setExpr(e.target.value)} placeholder="e.g. 2d6+3" onKeyDown={e => e.key==="Enter" && doRoll()} style={{ maxWidth: 160 }} />
         <Btn variant="gold" onClick={doRoll}><Dices size={14}/> Roll</Btn>
         {["1d20","2d6","1d100"].map(p => <Btn key={p} size="sm" onClick={() => setExpr(p)}>{p}</Btn>)}
+        <div style={{ flex: 1 }} />
+        <Btn size="sm" variant={priv ? "gold" : "ghost"} onClick={togglePriv} title="Private rolls are shown only to you and to DM view">{priv ? <EyeOff size={13}/> : <Eye size={13}/>} {priv ? "Rolling privately" : "Rolling in the open"}</Btn>
       </div>
-      {log.length === 0 ? <EmptyState icon={Dices} title="No rolls yet" body="Roll something — it's shared with the whole table." /> : (
+      {shown.length === 0 ? <EmptyState icon={Dices} title="No rolls yet" body="Every roll at the table shows up here: this roller, plus moves, skills, saves and spells rolled on a sheet." /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {log.map(r => (
-            <div key={r.id} style={{ display: "flex", justifyContent: "space-between", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
-              <span style={{ fontFamily: FONTS.mono, color: COLORS.muted }}>{r.expr} = [{r.rolls.join(", ")}]{r.mod ? (r.mod>0?`+${r.mod}`:r.mod) : ""}</span>
-              <span style={{ fontWeight: 700, color: COLORS.gold, fontFamily: FONTS.mono }}>{r.total}</span>
+          {shown.map(r => (
+            <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, background: COLORS.panel, border: `1px solid ${r.private ? COLORS.purple + "55" : COLORS.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
+              {r.kind === "sheet" ? (
+                <span style={{ minWidth: 0 }}>
+                  {r.who && <b style={{ color: COLORS.text }}>{r.who} </b>}
+                  <span style={{ color: COLORS.text }}>{r.label}</span>
+                  {r.private && <span style={{ color: COLORS.purple, fontSize: 11 }}> · private</span>}
+                  {r.detail && <span style={{ display: "block", fontFamily: FONTS.mono, color: COLORS.muted, fontSize: 11.5 }}>{r.detail}</span>}
+                </span>
+              ) : (
+                <span style={{ fontFamily: FONTS.mono, color: COLORS.muted }}>{r.expr} = [{(r.rolls || []).join(", ")}]{r.mod ? (r.mod>0?`+${r.mod}`:r.mod) : ""}</span>
+              )}
+              <span style={{ fontWeight: 700, color: COLORS.gold, fontFamily: FONTS.mono, alignSelf: "center" }}>{r.total}</span>
             </div>
           ))}
         </div>

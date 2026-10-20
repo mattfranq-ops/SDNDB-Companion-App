@@ -6,6 +6,7 @@ import { charTotalLevel } from "../../engine/core.js";
 import { cyberneticKiControlPenalty, cyberneticLimit, cyberneticsExempt, cyberneticsUsed, hasCybernetic, installedParts, isAndroidBody, partIsAdvanced } from "../../engine/cybernetics.js";
 import { computeAttacksPerTurn } from "../../engine/derived.js";
 import { EQUIP_SLOTS, computeAC, computeArmorDR, computeWeighted, equippedEntries, normalizeItem, slotTypeLabel, weightMultiplier } from "../../engine/equipment.js";
+import { cappedArmorDR } from "../../engine/damage.js";
 import { resourceRestPatch } from "../../engine/resources.js";
 import { activeAura } from "../../engine/spellcasting.js";
 import { uid } from "../../lib/dice.js";
@@ -187,7 +188,8 @@ function EquippedTab({ char, set }) {
   const candidates = (slotKey) => { const t = slotOf(slotKey)?.type; return items.filter(it => it.slot && it.slot === t); };
 
   const ac = computeAC(char);
-  const drShown = char.drOverride === true ? (char.dr || 0) : computeArmorDR(char);
+  const drRaw = char.drOverride === true ? (char.dr || 0) : computeArmorDR(char);
+  const drShown = cappedArmorDR(char);
   const active = activeSlot ? slotOf(activeSlot) : null;
   const filled = Object.values(equipment).filter(Boolean).length;
   const equippedEffects = equippedEntries(char).flatMap(e => (e.item.effects || []).map(ef => ({ ...ef, itemName: e.item.name, color: rarityInfo(e.item.rarity).color })));
@@ -228,7 +230,7 @@ function EquippedTab({ char, set }) {
           <div style={{ flex: 1, background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
             <div style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>Damage Reduction</div>
             <div style={{ fontSize: 26, fontWeight: 900, color: COLORS.text }}>{drShown}</div>
-            <div style={{ fontSize: 9, color: COLORS.dim, marginTop: 2 }}>{filled} slot{filled !== 1 ? "s" : ""} filled</div>
+            <div style={{ fontSize: 9, color: drRaw > drShown ? COLORS.amber : COLORS.dim, marginTop: 2 }}>{drRaw > drShown ? `capped at Prof + 1 (gear gives ${drRaw})` : `${filled} slot${filled !== 1 ? "s" : ""} filled`}</div>
           </div>
         </div>
 
