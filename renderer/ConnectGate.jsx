@@ -127,7 +127,7 @@ export default function ConnectGate({ children }) {
 
   return (
     <div style={{
-      minHeight: "100vh", color: COLORS.text, padding: 20,
+      minHeight: "100vh", color: COLORS.text, padding: 20, boxSizing: "border-box",
       background: `radial-gradient(ellipse at 50% 0%, ${COLORS.blue}14, transparent 60%), ${COLORS.bg}`,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: FONTS.body,

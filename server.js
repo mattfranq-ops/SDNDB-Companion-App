@@ -20,7 +20,13 @@ let worldsDir = null;
 const worlds = new Map();   // world -> Map(key -> value string)
 const clients = new Map();  // world -> Set(res)  (open SSE streams)
 const dirty = new Set();    // worlds with unsaved changes
+const lastBackup = new Map(); // world -> ms of the last .bak snapshot
 let saveTimer = null;
+
+const MAX_BODY = 8 * 1024 * 1024;
+const MAX_KEY = 256;
+const MAX_WORLD = 64;
+const BACKUP_EVERY_MS = 10 * 60 * 1000;
 let heartbeat = null;
 
 // --- persistence ---------------------------------------------------------
@@ -30,14 +36,29 @@ function worldFile(world) {
   return path.join(worldsDir, safe + ".json");
 }
 
-function loadWorld(world) {
+function readWorldFile(file) {
+  const obj = JSON.parse(fs.readFileSync(file, "utf8"));
   const map = new Map();
-  try {
-    const raw = fs.readFileSync(worldFile(world), "utf8");
-    const obj = JSON.parse(raw);
-    for (const k of Object.keys(obj)) map.set(k, obj[k]);
-  } catch { /* new world */ }
+  for (const k of Object.keys(obj)) map.set(k, obj[k]);
   return map;
+}
+
+function loadWorld(world) {
+  const file = worldFile(world);
+  if (!fs.existsSync(file)) return new Map(); // new world
+  try {
+    return readWorldFile(file);
+  } catch (e) {
+    // Corrupt save: fall back to the backup rather than starting empty (an
+    // empty world would overwrite the damaged file on the next save).
+    console.error("World file unreadable, trying backup:", e.message);
+    try {
+      fs.copyFileSync(file, file + ".corrupt-" + Date.now());
+      return readWorldFile(file + ".bak");
+    } catch {
+      return new Map();
+    }
+  }
 }
 
 function ensureWorld(world) {
@@ -60,7 +81,16 @@ function saveDirty() {
     for (const [k, v] of map) obj[k] = v;
     try {
       fs.mkdirSync(worldsDir, { recursive: true });
-      fs.writeFileSync(worldFile(world), JSON.stringify(obj));
+      const file = worldFile(world);
+      // Keep a rolling backup of the last good save, refreshed every few minutes.
+      const now = Date.now();
+      if (fs.existsSync(file) && now - (lastBackup.get(world) || 0) > BACKUP_EVERY_MS) {
+        fs.copyFileSync(file, file + ".bak");
+        lastBackup.set(world, now);
+      }
+      // Write-then-rename so a crash mid-save can never leave a half-written world.
+      fs.writeFileSync(file + ".tmp", JSON.stringify(obj));
+      fs.renameSync(file + ".tmp", file);
     } catch (e) {
       console.error("World save failed:", e.message);
     }
@@ -97,16 +127,25 @@ function sendJson(res, code, obj) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = "";
+    let done = false;
+    const fail = (e) => { if (!done) { done = true; reject(e); } };
     req.on("data", (c) => {
+      if (done) return;
       data += c;
-      if (data.length > 8 * 1024 * 1024) reject(new Error("body too large"));
+      if (data.length > MAX_BODY) { fail(new Error("body too large")); req.destroy(); }
     });
     req.on("end", () => {
+      if (done) return;
+      done = true;
       try { resolve(data ? JSON.parse(data) : {}); }
       catch { reject(new Error("bad json")); }
     });
-    req.on("error", reject);
+    req.on("error", fail);
   });
+}
+
+function validWorld(w) {
+  return typeof w === "string" && w.length > 0 && w.length <= MAX_WORLD;
 }
 
 function openStream(req, res, world) {
@@ -116,7 +155,7 @@ function openStream(req, res, world) {
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
   });
-  res.write(": connected\n\n");
+  res.write("retry: 2000\n: connected\n\n");
 
   if (!clients.has(world)) clients.set(world, new Set());
   clients.get(world).add(res);
@@ -133,12 +172,14 @@ async function handle(req, res) {
   if (req.method === "OPTIONS") { cors(res); res.writeHead(204); res.end(); return; }
 
   if (req.method === "GET" && url.pathname === "/events") {
-    openStream(req, res, url.searchParams.get("world") || "_default");
+    const world = url.searchParams.get("world") || "_default";
+    if (!validWorld(world)) { sendJson(res, 400, { error: "bad world" }); return; }
+    openStream(req, res, world);
     return;
   }
 
   if (req.method === "GET" && url.pathname === "/ping") {
-    sendJson(res, 200, { ok: true, worlds: [...worlds.keys()] });
+    sendJson(res, 200, { ok: true, app: "sdndbz-companion", worlds: [...worlds.keys()] });
     return;
   }
 
@@ -149,6 +190,12 @@ async function handle(req, res) {
 
     const op = url.pathname.slice(5);
     const world = body.world || "_default";
+    if (!validWorld(world)) { sendJson(res, 400, { error: "bad world" }); return; }
+    if (op !== "list" && (typeof body.key !== "string" || !body.key || body.key.length > MAX_KEY)) {
+      sendJson(res, 400, { error: "bad key" });
+      return;
+    }
+    if (op === "set" && typeof body.value !== "string") { sendJson(res, 400, { error: "value must be a string" }); return; }
     const map = ensureWorld(world);
 
     switch (op) {
@@ -214,7 +261,13 @@ function stop() {
   for (const set of clients.values())
     for (const res of set) { try { res.end(); } catch {} }
   clients.clear();
-  if (server) { server.close(); server = null; }
+  worlds.clear(); // reload from disk on the next start
+  if (server) {
+    server.close();
+    // Drop idle keep-alive sockets too, or the port stays held after "Stop".
+    if (server.closeAllConnections) server.closeAllConnections();
+    server = null;
+  }
   return { running: false };
 }
 
