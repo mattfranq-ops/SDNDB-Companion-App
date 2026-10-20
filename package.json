@@ -1,6 +1,6 @@
 {
   "name": "sdndbz-companion",
-  "version": "1.13.2",
+  "version": "2.0.0",
   "description": "SDNDBZ Companion - character sheets, combat tracker, NPCs, tables, shared live across the table.",
   "main": "main.js",
   "scripts": {

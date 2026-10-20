@@ -24,7 +24,7 @@ You need one of these so players can reach the host:
 -----------------------------------------------------
 PART 1 : INSTALLING  (EVERYONE)
 -----------------------------------------------------
-1. Run "SDNDBZ Companion Setup 1.12.0.exe".
+1. Run the "SDNDBZ Companion Setup" installer you were given.
 2. Choose where to install (or accept the default) and finish.
 3. Launch "SDNDBZ Companion" from the Start Menu or the desktop icon.
 4. On first launch you see a credits screen. Scroll to the bottom, then click
@@ -39,12 +39,16 @@ PART 2 : FOR THE HOST  (THE DM)
 2. TABLE NAME : type any name, such as FRIEZA CREW. This is the room your
    players will join. Leave PORT as 30000 unless you have a reason to change it.
 3. Click "Start Hosting".
-4. The app shows one or more addresses, for example:
+4. The table panel opens at the top right and shows one or more addresses,
+   for example:
         192.168.1.20 : 30000     (your LAN address)
         25.x.x.x : 30000         (your Hamachi address, if Hamachi is running)
    Read the correct one to your players. Part 4 explains which to use.
 5. Also give players the TABLE NAME. They need BOTH the address and the name.
 6. Keep the app open while you play. Your world saves automatically on your PC.
+7. Need the addresses again later? Click the table name at the top right of the
+   app (the green LIVE pill). The same panel shows how many devices are
+   connected and has the "Stop hosting" button.
 
 Note: the host also plays in the same window. You are hosting AND joined at once,
 so you do not need a second copy open.
@@ -59,7 +63,11 @@ PART 3 : FOR PLAYERS
 4. TABLE NAME : type the exact name the DM gave you.
 5. Click "Connect".
 
-Once connected you see the same live characters, NPCs, combat tracker, notes,
+Once connected, the pill at the top right shows the table name and LIVE. If it
+turns amber and says RECONNECTING, the host went away; the app keeps retrying
+on its own. Click the pill to see the host address or to leave the table.
+
+You see the same live characters, NPCs, combat tracker, notes,
 and map as everyone else. Changes appear for the whole table in real time.
 
 If it says it cannot reach the table server:
@@ -121,6 +129,9 @@ TROUBLESHOOTING
                                  must match exactly, including spelling.
  * Where is my data ............ the world is saved on the DM's computer only.
                                  Treat the DM's machine as the source of truth.
+                                 Each table also keeps a backup copy (.bak) that
+                                 the app falls back to if the save is damaged.
+ * Change the look ............. Compendium : Options : Interface Theme.
 
 Have fun.
 =====================================================
