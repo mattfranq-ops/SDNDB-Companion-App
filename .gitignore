@@ -1,0 +1,6 @@
+node_modules/
+dist/
+release/
+worlds/
+*.log
+.DS_Store

@@ -1,0 +1,126 @@
+=====================================================
+ SDNDBZ COMPANION : SETUP AND PLAY GUIDE
+=====================================================
+
+HOW SHARING WORKS NOW  (READ THIS FIRST)
+
+The app used to sync through an online service. It does not anymore.
+
+Now ONE person (the DM) hosts the table right on their own computer, and
+everyone else connects to them. This is the same way Foundry works.
+
+What that means:
+ * The DM opens the app and starts hosting. Their computer IS the table.
+ * Players open the app and join the DM's address.
+ * The DM must keep the app OPEN for players to stay connected. If the DM
+   closes it, the table goes offline until they reopen it.
+ * Nothing is stored online. The whole world lives on the DM's machine.
+
+You need one of these so players can reach the host:
+ * Same house or same Wi Fi ....... nothing extra, just the host's local address.
+ * Over the internet ............... a free VPN like Hamachi or ZeroTier (Part 4).
+
+
+-----------------------------------------------------
+PART 1 : INSTALLING  (EVERYONE)
+-----------------------------------------------------
+1. Run "SDNDBZ Companion Setup 1.12.0.exe".
+2. Choose where to install (or accept the default) and finish.
+3. Launch "SDNDBZ Companion" from the Start Menu or the desktop icon.
+4. On first launch you see a credits screen. Scroll to the bottom, then click
+   "I Acknowledge".
+5. Next you see two choices: "Host a table" and "Join a table". See below.
+
+
+-----------------------------------------------------
+PART 2 : FOR THE HOST  (THE DM)
+-----------------------------------------------------
+1. On the start screen choose "Host a table".
+2. TABLE NAME : type any name, such as FRIEZA CREW. This is the room your
+   players will join. Leave PORT as 30000 unless you have a reason to change it.
+3. Click "Start Hosting".
+4. The app shows one or more addresses, for example:
+        192.168.1.20 : 30000     (your LAN address)
+        25.x.x.x : 30000         (your Hamachi address, if Hamachi is running)
+   Read the correct one to your players. Part 4 explains which to use.
+5. Also give players the TABLE NAME. They need BOTH the address and the name.
+6. Keep the app open while you play. Your world saves automatically on your PC.
+
+Note: the host also plays in the same window. You are hosting AND joined at once,
+so you do not need a second copy open.
+
+
+-----------------------------------------------------
+PART 3 : FOR PLAYERS
+-----------------------------------------------------
+1. On the start screen choose "Join a table".
+2. HOST ADDRESS : type the address the DM gave you (for example 25.1.2.3).
+3. PORT : 30000  (unless the DM told you a different number).
+4. TABLE NAME : type the exact name the DM gave you.
+5. Click "Connect".
+
+Once connected you see the same live characters, NPCs, combat tracker, notes,
+and map as everyone else. Changes appear for the whole table in real time.
+
+If it says it cannot reach the table server:
+ * The DM has not started hosting yet, or closed the app.
+ * The address or table name has a typo.
+ * You are not on the same network or VPN as the DM (see Part 4).
+
+
+-----------------------------------------------------
+PART 4 : PLAYING OVER THE INTERNET
+-----------------------------------------------------
+Everyone in the same house on the same Wi Fi:
+ * Use the host's LAN address (usually starts with 192.168 or 10.). Done.
+
+Players in different places:
+ * Use a free VPN so everyone looks like they are on one network.
+   1. Everyone installs Hamachi (or ZeroTier).
+   2. The DM creates a network; players join that network.
+   3. The DM reads their Hamachi address (it starts with 25.) to the players.
+   4. Players type that 25.x.x.x address into HOST ADDRESS when they Join.
+
+The app cannot open your home network to the internet by itself. That is what
+the VPN handles, and why remote play needs one.
+
+
+-----------------------------------------------------
+PART 5 : A QUICK TOUR
+-----------------------------------------------------
+The bottom bar has five sections:
+ * Players ...... build and run character sheets.
+ * NPCs ......... statblocks and a bestiary for the DM.
+ * Session ...... the live table: initiative tracker, dice rolls, Quick Combat,
+                  Environment and hazards, a clock and calendar, and notes.
+ * Universe ..... the galaxy map, planets, store, and economy.
+ * Compendium ... rules data, tables, and Materoids Flavors (optional rules).
+
+THE BATTLE MAP
+ Click the "MAP" arrow on the right edge (works on Players, NPCs, or Session)
+ to roll out the tactical map. Tokens come from the initiative tracker. Drag a
+ token to move it, and each token has an altitude for flying. A fighter in a
+ form takes that form's aura color, and giant forms like Great Ape grow the
+ token.
+
+OPTIONAL RULES
+ Compendium : Materoids Flavors holds the optional systems. Turn on things like
+ Harsh Galaxies (a planet's weather and hazards affect the fight) or Quick
+ Combat (resolve a skirmish in one roll instead of playing it out).
+
+
+-----------------------------------------------------
+TROUBLESHOOTING
+-----------------------------------------------------
+ * Players cannot connect ...... check that the DM clicked "Start Hosting" and
+                                 left the app open, that everyone typed the SAME
+                                 table name, and that remote players are on the
+                                 same Hamachi or ZeroTier network as the DM.
+ * Firewall popup on the host .. allow the app through so players can reach it.
+ * Nothing syncs ............... you are probably on different table names. They
+                                 must match exactly, including spelling.
+ * Where is my data ............ the world is saved on the DM's computer only.
+                                 Treat the DM's machine as the source of truth.
+
+Have fun.
+=====================================================
