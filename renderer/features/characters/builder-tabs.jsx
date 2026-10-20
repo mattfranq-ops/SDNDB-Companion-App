@@ -14,7 +14,7 @@ import { SKILL_LIST, STAT_KEYS, computeSaveBonus, computeSkillBonus, speciesByNa
 import { alignmentAuraColor } from "../../engine/spellcasting.js";
 import { pick, roll, uid } from "../../lib/dice.js";
 import { useHouseRules, useSharedList } from "../../state/hooks.js";
-import { Btn, EmptyState, Field, Gauge, InfoChip, LoadingBlock, Select, SelectWithCustom, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
+import { Btn, Checkbox, EmptyState, Field, Gauge, InfoChip, LoadingBlock, Select, SelectWithCustom, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FEAT_LISTS, FEAT_LIST_COLOR, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "../session/combat-parts.jsx";
 import { RESOURCE_RESET_LABEL } from "./magic.jsx";
@@ -572,7 +572,55 @@ function BioTab({ char, set, withName, withNotes, customSpeciesInput, setCustomS
       </div>
       <Field label="Core Personality Traits"><TextArea value={char.personality || ""} onChange={e => set({ personality: e.target.value })} placeholder="One trait per line..." /></Field>
       <Field label="Flaws & Weaknesses"><TextArea value={char.flaws || ""} onChange={e => set({ flaws: e.target.value })} placeholder="One flaw per line..." /></Field>
+      <StorySection char={char} set={set} />
       {withNotes && <Field label="Notes"><TextArea value={char.notes} onChange={e => set({ notes: e.target.value })} /></Field>}
+    </div>
+  );
+}
+
+// Story: backstory, goals and the people in the character's life (the
+// Cyberpunk RED Companion's lifepath, objectives and contacts, in SDNDB terms).
+const RELATIONS = ["Ally", "Contact", "Mentor", "Family", "Rival", "Enemy", "Love interest"];
+const RELATION_COLOR = { Ally: "green", Contact: "blue", Mentor: "gold", Family: "purple", Rival: "amber", Enemy: "red", "Love interest": "purple" };
+function StorySection({ char, set }) {
+  const goals = char.goals || [];
+  const people = char.people || [];
+  const [goalText, setGoalText] = useState("");
+  const addGoal = () => { const t = goalText.trim(); if (!t) return; set({ goals: [...goals, { id: uid(), text: t, done: false }] }); setGoalText(""); };
+  const updGoal = (id, patch) => set({ goals: goals.map(g => g.id === id ? { ...g, ...patch } : g) });
+  const updPerson = (id, patch) => set({ people: people.map(p => p.id === id ? { ...p, ...patch } : p) });
+  const head = { fontSize: 11.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", margin: "14px 0 8px" };
+  return (
+    <div>
+      <div style={head}>Story</div>
+      <Field label="Backstory"><TextArea value={char.backstory || ""} onChange={e => set({ backstory: e.target.value })} placeholder="Where they come from, who trained them, what drove them to fight…" /></Field>
+
+      <div style={head}>Goals</div>
+      {goals.map(g => (
+        <div key={g.id} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+          <Checkbox checked={!!g.done} onChange={() => updGoal(g.id, { done: !g.done })} />
+          <TextInput value={g.text} onChange={e => updGoal(g.id, { text: e.target.value })} style={{ flex: 1, textDecoration: g.done ? "line-through" : "none", opacity: g.done ? 0.6 : 1 }} />
+          <Btn size="sm" variant="ghost" onClick={() => set({ goals: goals.filter(x => x.id !== g.id) })} title="Remove goal"><Trash2 size={13} color={COLORS.red}/></Btn>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 6 }}>
+        <TextInput value={goalText} onChange={e => setGoalText(e.target.value)} onKeyDown={e => e.key === "Enter" && addGoal()} placeholder="Add a goal…" />
+        <Btn size="sm" onClick={() => addGoal()}><Plus size={13}/></Btn>
+      </div>
+
+      <div style={{ ...head, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>People</span>
+        <Btn size="sm" onClick={() => set({ people: [...people, { id: uid(), name: `${pick(NPC_POOLS.first)} ${pick(NPC_POOLS.last)}`, relation: "Contact", notes: "" }] })}><Plus size={13}/> Add someone</Btn>
+      </div>
+      {people.length === 0 && <div style={{ color: COLORS.dim, fontSize: 12 }}>Allies, contacts, mentors, rivals and enemies.</div>}
+      {people.map(p => (
+        <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 0.9fr 2fr auto", gap: 6, alignItems: "center", marginBottom: 6 }}>
+          <TextInput value={p.name} onChange={e => updPerson(p.id, { name: e.target.value })} placeholder="Name" style={{ borderLeft: `3px solid ${COLORS[RELATION_COLOR[p.relation]] || COLORS.border}` }} />
+          <Select value={p.relation} onChange={e => updPerson(p.id, { relation: e.target.value })}>{RELATIONS.map(r => <option key={r}>{r}</option>)}</Select>
+          <TextInput value={p.notes || ""} onChange={e => updPerson(p.id, { notes: e.target.value })} placeholder="How they know each other, what they owe…" />
+          <Btn size="sm" variant="ghost" onClick={() => set({ people: people.filter(x => x.id !== p.id) })} title="Remove"><Trash2 size={13} color={COLORS.red}/></Btn>
+        </div>
+      ))}
     </div>
   );
 }

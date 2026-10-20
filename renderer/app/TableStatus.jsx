@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Copy, LogOut, Radio, Users, Wifi, WifiOff } from "lucide-react";
-import { Btn, ConfirmBtn } from "../ui/atoms.jsx";
+import { Copy, Download, LogOut, Radio, Users, Wifi, WifiOff } from "lucide-react";
+import { Btn, ConfirmBtn, downloadJSON } from "../ui/atoms.jsx";
 import { COLORS, FONTS } from "../ui/theme.js";
 
 // Set by ConnectGate right after "Start Hosting" so the host lands on the
@@ -11,6 +11,19 @@ function useConnection() {
   const [live, setLive] = useState(() => window.storage.isConnected());
   useEffect(() => window.storage.onStatus(setLive), []);
   return live;
+}
+
+// Every shared doc at this table in one JSON file: characters, NPCs, the
+// galaxy, the tracker, notes. The table server is the only copy of a campaign,
+// so anyone at the table can keep their own backup.
+async function downloadTableBackup(world) {
+  const { keys } = await window.storage.list("", true);
+  const docs = {};
+  for (const k of keys) {
+    try { const r = await window.storage.get(k, true); docs[k] = JSON.parse(r.value); } catch { /* skip unreadable */ }
+  }
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  downloadJSON({ app: "SDNDBZ Companion", table: world, savedAt: new Date().toISOString(), docs }, `${(world || "table").replace(/\W+/g, "_")}-backup-${stamp}.json`);
 }
 
 // Host-only: poll the local server for addresses + connected players while open.
@@ -108,7 +121,9 @@ function TableStatus() {
               <CopyLine text={(server || "").replace(/^https?:\/\//, "")} />
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+            <Btn size="sm" variant="ghost" onClick={() => downloadTableBackup(world).catch(() => {})} title="Save everything at this table to a file on this device"><Download size={13} /> Backup</Btn>
+            <div style={{ flex: 1 }} />
             <Btn size="sm" variant="ghost" onClick={() => setOpen(false)}>Close</Btn>
             <ConfirmBtn size="sm" confirmTitle={isHost ? "Stop hosting and leave" : "Leave table"} onConfirm={leave}>
               {isHost ? <Radio size={13} /> : <LogOut size={13} />} {isHost ? "Stop hosting" : "Leave table"}

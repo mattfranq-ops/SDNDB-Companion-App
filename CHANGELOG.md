@@ -38,6 +38,12 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   Combat tab warns about Exhaustion and Ki Exhaustion.
 - A condition tag's remove control is now a real button (keyboard and screen readers).
 
+**Sheet and table**
+- Bio → **Story**: backstory, a goals checklist, and the people in a character's life (allies,
+  contacts, mentors, family, rivals, enemies) with notes.
+- Table panel → **Backup** saves every shared doc at the table (characters, NPCs, galaxy,
+  tracker, notes) to one JSON file on any device.
+
 **Fixed**
 - An open character sheet ignored changes made elsewhere at the table (damage, Upkeep) and
   wrote the old numbers back on the next edit.
