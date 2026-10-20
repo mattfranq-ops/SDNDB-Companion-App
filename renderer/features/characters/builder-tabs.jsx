@@ -19,6 +19,7 @@ import { COLORS, FEAT_LISTS, FEAT_LIST_COLOR, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "../session/combat-parts.jsx";
 import { RESOURCE_RESET_LABEL } from "./magic.jsx";
 import { useSpeciesList } from "./model.js";
+import { ClassSummary, ClassTable, FeatureList, FeatureRulesList } from "./class-features.jsx";
 
 function ClassPicker({ value, onConfirm, onCancel }) {
   const [sel, setSel] = useState(value || CLASS_NAMES[0]);
@@ -31,9 +32,15 @@ function ClassPicker({ value, onConfirm, onCancel }) {
         ))}
       </div>
       <div style={{ border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 16 }}>
-        <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{sel}</div>
-        <div style={{ height: 1, background: COLORS.border, marginBottom: 10 }} />
-        <div style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6, maxHeight: 180, overflowY: "auto" }}>{c.flavor}</div>
+        <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 17 }}>{sel}</div>
+        {c.tagline && <div style={{ color: COLORS.gold, fontSize: 12, fontWeight: 600, marginTop: 2 }}>{c.tagline}</div>}
+        <div style={{ height: 1, background: COLORS.border, margin: "8px 0 10px" }} />
+        <div style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6, maxHeight: 140, overflowY: "auto", marginBottom: 12 }}>{c.flavor}</div>
+        <ClassSummary classId={sel} />
+        <details style={{ marginTop: 12 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: COLORS.blue }}>Class table, levels 1–20</summary>
+          <div style={{ marginTop: 8 }}><ClassTable classId={sel} level={1} /></div>
+        </details>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
           <Btn variant="gold" onClick={() => onConfirm(sel)}><Check size={14}/> Confirm</Btn>
           <Btn onClick={onCancel}>Cancel</Btn>
@@ -46,17 +53,14 @@ function ClassPicker({ value, onConfirm, onCancel }) {
 function AbilityTab({ classId, level }) {
   if (!classId || !CLASS_DATA[classId]) return <EmptyState icon={BookOpen} title="No class selected" body="Pick a class in the Class tab to see its live feature progression here." />;
   const c = CLASS_DATA[classId];
-  const lvls = Object.keys(c.featuresByLevel).map(Number).filter(l => l <= (level || 20)).sort((a,b) => a-b);
   return (
     <div>
-      <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{classId} — Level {level}</div>
-      <div style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${COLORS.border}` }}>{c.flavor}</div>
-      {lvls.map(l => (
-        <div key={l} style={{ display: "flex", gap: 12, marginBottom: 8, alignItems: "flex-start" }}>
-          <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 7, background: `${COLORS.blue}15`, border: `1px solid ${COLORS.blue}44`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONTS.mono, fontSize: 12, color: COLORS.blue, fontWeight: 700 }}>{l}</div>
-          <div style={{ fontSize: 13, color: COLORS.text, paddingTop: 6 }}>{c.featuresByLevel[l]}</div>
-        </div>
-      ))}
+      <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 16 }}>{classId} — Level {level}</div>
+      {c.tagline && <div style={{ color: COLORS.gold, fontSize: 12, fontWeight: 600, marginTop: 2 }}>{c.tagline}</div>}
+      <div style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6, margin: "8px 0 12px", paddingBottom: 12, borderBottom: `1px solid ${COLORS.border}` }}>{c.flavor}</div>
+      <div style={{ marginBottom: 14 }}><ClassSummary classId={classId} /></div>
+      <div style={{ fontSize: 11, color: COLORS.dim, marginBottom: 6 }}>Click a feature to read its rules.</div>
+      <ClassTable classId={classId} level={level || 20} />
     </div>
   );
 }
@@ -215,7 +219,10 @@ function FeaturesTab({ char, set }) {
       ) : (
         <div style={{ marginBottom: 18 }}>
           {classFeatures.map(({ classId, lvl, text }, i) => (
-            <InfoChip key={`${classId}-${lvl}-${i}`} label={multi ? `${classId} ${lvl}` : `Lv ${lvl}`} sub={text.split(",")[0]} description={text} color={COLORS.blue} />
+            <div key={`${classId}-${lvl}-${i}`} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8 }}>
+              <div style={{ minWidth: multi ? 86 : 44, flexShrink: 0, paddingTop: 4, fontFamily: FONTS.mono, fontSize: 11.5, color: COLORS.blue, fontWeight: 700 }}>{multi ? `${classId} ${lvl}` : `Lv ${lvl}`}</div>
+              <div style={{ flex: 1, minWidth: 0 }}><FeatureList classId={classId} text={text} /></div>
+            </div>
           ))}
         </div>
       )}
@@ -640,7 +647,8 @@ function LevelUpModal({ char, set, classIndex, onClose }) {
   const featTokens = feats.split(",").map(s => s.trim()).filter(Boolean);
   const grantsFeat = featTokens.some(t => /^(Feat|Epic Boon|Heroic Surge)$/.test(t));
 
-  const die = char.hitDie || "d8";
+  // The hit die of the class being levelled (multiclass gains that class's die).
+  const die = cd?.hitDie || char.hitDie || "d8";
   const dieSize = parseInt(die.slice(1), 10) || 8;
   const conMod = statMod(char, "con");
   const avgRoll = Math.floor(dieSize / 2) + 1; // 5e "fixed HP" value for the die
@@ -718,7 +726,7 @@ function LevelUpModal({ char, set, classIndex, onClose }) {
         {feats && (
           <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 12, marginBottom: 12 }}>
             <div style={{ fontSize: 10.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 }}>Class Features at {c.classId} {toCL}</div>
-            <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}>{feats}</div>
+            <FeatureRulesList classId={c.classId} text={feats} />
             {grantsFeat && <div style={{ fontSize: 11.5, color: COLORS.gold, marginTop: 6 }}>Grants a Feat — pick it in Growth → Feats.</div>}
           </div>
         )}
@@ -768,7 +776,15 @@ function ClassesTab({ char, set, guided = false }) {
     else updateClass(i, { level: Math.min(20, (c.level || 1) + 1) });
   };
   const removeClass = (i) => set({ classes: classes.filter((_, j) => j !== i) });
-  const addClass = (classId) => { set({ classes: [...classes, { classId, level: 1 }] }); setAdding(false); };
+  // The first class sets the saving throw proficiencies (5e: a multiclass
+  // doesn't add saves), unless the player already picked some.
+  const addClass = (classId) => {
+    const patch = { classes: [...classes, { classId, level: 1 }] };
+    const saves = CLASS_DATA[classId]?.saves;
+    if (!classes.length && saves?.length && !(char.savingThrowProfs || []).length) patch.savingThrowProfs = saves;
+    set(patch);
+    setAdding(false);
+  };
   const total = charTotalLevel(char);
 
   if (adding || classes.length === 0) return (

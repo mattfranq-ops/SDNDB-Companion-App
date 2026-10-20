@@ -38,6 +38,31 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   Combat tab warns about Exhaustion and Ki Exhaustion.
 - A condition tag's remove control is now a real button (keyboard and screen readers).
 
+**Classes rebuilt from the 5.0 book** (Ch.4, pp. 89–178)
+- All 18 class tables were re-read from the book. 17 of them had the wrong features at some
+  levels (Bastion, for one, had a made-up list), so level-up showed the wrong things.
+- Every class feature now has its rules text. Click a feature on the class table, the Features
+  list or the level-up dialog to read it, options included (Quips, Combat Maneuvers, Deadly
+  Tricks, Meal Prep dinners and the rest).
+- The class picker and Compendium show the book's tagline and story, hit die, Ki Modifier,
+  saves, proficiencies, starting equipment and the full table with its extra columns.
+- The first class you pick sets your saving throw proficiencies, and level-up rolls the hit die
+  of the class you're levelling.
+- **Unarmored Defense** now adds half your Proficiency Bonus, rounded up, as the book says (it
+  was missing). Warrior adds the whole Proficiency Bonus. In armor, a class with a stat-based
+  Unarmored Defense can use that stat instead of DEX. Magus and Mystic get DR of Ki Rank + 1
+  unarmored (halved in armor).
+- **Extra Attack** counts each time the table grants it, so a level 20 Warrior gets four attacks
+  and classes without it (Mystic) get one.
+- Unarmed Strike and Basic Ki Blast dice come from the class table, and the strike uses the
+  best stat your Unarmed Combat style allows (Calculated INT, Flashy CHA, Perceptive WIS…).
+- Class pools from the book: Agent Battery Points, Bastion Defensive Energy, Bruiser Dragon
+  Soul, Champion Hype (earned, lost on a Long Rest), Grand Chef Restorative Candy, Hero Die
+  (now d6 → 2d6 as printed), Leader pool, Punisher Power Points, Virtuoso Explosive Power and
+  Warrior Superiority Dice (from 2nd level, d8 → d12). Pool dice like 4d6 roll in one click.
+  Elite Critical Technique is no longer a limited pool in 5.0, so it's gone.
+- Superiority Dice regain Ki Rank dice at the start of the turn, not the whole pool.
+
 **Sheet and table**
 - Bio → **Story**: backstory, a goals checklist, and the people in a character's life (allies,
   contacts, mentors, family, rivals, enemies) with notes.

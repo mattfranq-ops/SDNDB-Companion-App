@@ -43,8 +43,11 @@ Two reports in the project's shared files say what's left:
   death saves, start of turn) is done; `engine/damage.js` holds those rules and
   `test/damage.test.js` pins them. Pass 2 is the full condition list with timers and
   start-of-turn effects; pass 3 is the sheet (backstory, technique charges, table backup).
-- `sdnd/5.0-feature-gaps.md` lists the 5.0 book content that's missing or wrong, starting with
-  the class tables.
+- `sdnd/5.0-feature-gaps.md` lists the 5.0 book content that's missing or wrong. The class
+  tables are done: `data/class-data.js` was regenerated from the book (tables, feature text and
+  options, saves, proficiencies, table columns), and `test/classes.test.js` checks it. Next in
+  that report: forms with real stats and Ascend / Ramp Up, the species stubs, heritages and
+  Biology feats, then gear.
 
 ## Tips for whoever picks this up
 

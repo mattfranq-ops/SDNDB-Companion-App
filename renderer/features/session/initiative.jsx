@@ -231,7 +231,9 @@ function InitiativeTab() {
       }
       // Class resources that refresh every turn.
       if (src && nowActive.sourceType === "player" && (src.resources || []).some(r => r.reset === "turn" && r.current < r.max)) {
-        merge({ resources: src.resources.map(r => r.reset === "turn" ? { ...r, current: r.max } : r) });
+        // Superiority Dice regain Ki Rank dice, not the whole pool.
+        const kr = computeKiRank(src);
+        merge({ resources: src.resources.map(r => r.reset !== "turn" ? r : { ...r, current: r.regen === "kirank" ? Math.min(r.max, (r.current || 0) + kr) : r.max }) });
       }
 
       const conscious = (cur.hp || 0) > 0;

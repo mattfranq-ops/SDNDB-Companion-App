@@ -8,7 +8,7 @@ import { computeAttacksPerTurn } from "../../engine/derived.js";
 import { EQUIP_SLOTS, computeAC, computeArmorDR, computeWeighted, equippedEntries, normalizeItem, slotTypeLabel, weightMultiplier } from "../../engine/equipment.js";
 import { cappedArmorDR } from "../../engine/damage.js";
 import { resourceRestPatch } from "../../engine/resources.js";
-import { activeAura } from "../../engine/spellcasting.js";
+import { activeAura, classDefenseDR } from "../../engine/spellcasting.js";
 import { uid } from "../../lib/dice.js";
 import { attunementCapFor, useHouseRules } from "../../state/hooks.js";
 import { Btn, Checkbox, CommaNumInput, Gauge, Select, TextInput } from "../../ui/atoms.jsx";
@@ -188,7 +188,7 @@ function EquippedTab({ char, set }) {
   const candidates = (slotKey) => { const t = slotOf(slotKey)?.type; return items.filter(it => it.slot && it.slot === t); };
 
   const ac = computeAC(char);
-  const drRaw = char.drOverride === true ? (char.dr || 0) : computeArmorDR(char);
+  const drRaw = (char.drOverride === true ? (char.dr || 0) : computeArmorDR(char)) + classDefenseDR(char, !!ac?.armored);
   const drShown = cappedArmorDR(char);
   const active = activeSlot ? slotOf(activeSlot) : null;
   const filled = Object.values(equipment).filter(Boolean).length;

@@ -1,4 +1,4 @@
-import { CLASS_DATA } from "../data/class-data.js";
+import { CLASS_DATA, classColumn } from "../data/class-data.js";
 import { uid } from "../lib/dice.js";
 import { abilityMod, activeForms, benefitsOfPower, charClasses, charTotalLevel, computeKiRank, effectivePowerBonus, effectiveStats, profBonusForLevel, stablePower, statMod } from "./core.js";
 import { weightMultiplier } from "./equipment.js";
@@ -159,20 +159,46 @@ function featsOwed(char) {
   return { heroic, general, epic, surges, total: heroic + general + epic };
 }
 
-// Attacks per turn — counts "Extra Attack" occurrences unlocked at or below
-// each class's own level (multiclass takes the best across classes).
+// Attacks per turn — 1 + each "Extra Attack" in the Features column at or below
+// that class's own level (the book repeats the token: Warrior has it at 5, 11
+// and 20). Multiclass takes the best class, like 5e.
 function computeAttacksPerTurn(char) {
   let attacks = 1;
   charClasses(char).forEach(({ classId, level }) => {
     const classData = CLASS_DATA[classId];
     if (!classData) return;
+    let n = 1;
     Object.entries(classData.featuresByLevel).forEach(([lvl, text]) => {
       if (Number(lvl) > (level || 1)) return;
-      const m = text.match(/Extra Attack(?:\s*\((\d+)\))?/);
-      if (m) attacks = Math.max(attacks, 1 + (m[1] ? Number(m[1]) : 1));
+      for (const item of String(text).split(",")) {
+        const m = item.trim().match(/^Extra Attack(?:\s*\((\d+)\))?$/);
+        if (m) n = m[1] ? Math.max(n, 1 + Number(m[1])) : n + 1;
+      }
     });
+    attacks = Math.max(attacks, n);
   });
   return attacks;
+}
+
+// Unarmed Strike and Basic Ki Blast dice from the class table (5.0 Ch.4).
+// "Set by highest leveled Class" (Basic Ki Blast, p.26); the same class's
+// Unarmed Combat style decides which stats an Unarmed Strike may use.
+const UNARMED_STYLE_STATS = {
+  Calculated: ["str", "int"], Skilled: ["str", "dex"], Power: ["str"], Flashy: ["str", "cha"],
+  Perceptive: ["str", "wis"], Magic: ["str", "cha"], Monastic: ["str", "dex"],
+};
+function classUnarmed(char) {
+  const top = charClasses(char).filter(c => CLASS_DATA[c.classId]).sort((a, b) => (b.level || 1) - (a.level || 1))[0];
+  if (!top) return { classId: null, style: null, strikeDie: "1d4", blastDie: "1d4", strikeStat: "str" };
+  const style = CLASS_DATA[top.classId].unarmedCombat;
+  const stats = UNARMED_STYLE_STATS[style] || ["str"];
+  const strikeStat = stats.reduce((best, k) => statMod(char, k) > statMod(char, best) ? k : best, stats[0]);
+  return {
+    classId: top.classId, style,
+    strikeDie: classColumn(top.classId, "Unarmed Strikes", top.level) || "1d4",
+    blastDie: classColumn(top.classId, "Ki Blast", top.level) || "1d4",
+    strikeStat,
+  };
 }
 
 export {
@@ -197,4 +223,5 @@ export {
   techniquesKnownBudget,
   featsOwed,
   computeAttacksPerTurn,
+  classUnarmed,
 };

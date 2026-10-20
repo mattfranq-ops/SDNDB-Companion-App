@@ -15,8 +15,13 @@ import { miniBtnStyle } from "../session/combat-parts.jsx";
 // custom pools and remove them; compact mode (Combat) just spends/rolls them where
 // you act. Class pools are auto-provisioned by reconcileResources, so here they're
 // only spent/restored/rolled — their max is owned by the class table.
-const RESOURCE_RESET_LABEL = { short: "Short Rest", long: "Long Rest", shortHalfLongFull: "½ Short · Long", turn: "Start of turn", encounter: "Per encounter", dawn: "Dawn", manual: "Manual" };
-const resourceDieSize = (die) => parseInt(String(die || "").slice(1), 10) || 0;
+const RESOURCE_RESET_LABEL = { short: "Short Rest", long: "Long Rest", shortHalfLongFull: "½ Short · Long", turn: "Start of turn", encounter: "Per encounter", dawn: "Dawn", manual: "Manual", earned: "Earned · lost on Long Rest" };
+// "d8" or "4d6" → { count, size }; size 0 when there's no die.
+const parseResourceDie = (die) => {
+  const m = String(die || "").match(/^(\d*)d(\d+)$/);
+  return m ? { count: Number(m[1]) || 1, size: Number(m[2]) } : { count: 0, size: 0 };
+};
+const resourceDieSize = (die) => parseResourceDie(die).size;
 function ResourceTracker({ char, set, compact = false }) {
   const list = char.resources || [];
   const [adding, setAdding] = useState(false);
@@ -28,7 +33,8 @@ function ResourceTracker({ char, set, compact = false }) {
   const rollDie = (r) => {
     const size = resourceDieSize(r.die);
     if (!size || (r.current || 0) <= 0) return;
-    const v = roll(size);
+    const { count } = parseResourceDie(r.die);
+    let v = 0; for (let i = 0; i < count; i++) v += roll(size);
     spend(r);
     setFlash({ id: r.id, value: v });
     emitRoll({ label: r.name, total: v, detail: `${r.die} · spent 1`, color: COLORS.blue });

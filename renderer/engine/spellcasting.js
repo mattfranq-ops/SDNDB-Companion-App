@@ -1,6 +1,6 @@
 import { CLASS_DATA } from "../data/class-data.js";
 import { FULL_CASTER_SLOTS } from "../data/spell-data.js";
-import { STAT_MOD_LABEL, UNARMORED_DEFENSE_STAT, activeForms, benefitsOfPower, charClasses, charTotalLevel, profBonusForLevel, statMod } from "./core.js";
+import { STAT_MOD_LABEL, UNARMORED_DEFENSE_STAT, activeForms, benefitsOfPower, charClasses, charTotalLevel, computeKiRank, profBonusForLevel, statMod } from "./core.js";
 
 /* ===== Spellcasting (book Ch.1 "Spellcasting" + caster classes) ===== */
 // SD&DBZ casting is NOT slot-gated in general: "the casting of Spells in SD&DBZ
@@ -89,20 +89,37 @@ function activeAura(char) {
   return null;
 }
 
-// AC = 10 + DEX + [class's second stat, or half-Prof for Magic/Prof variants].
-// Multiclass uses the primary (first-listed) class's Unarmored Defense.
-// This runs live off classes + level + stats, so it never goes stale on level-up.
+// Unarmored Defense (5.0 Ch.4): 10 + DEX + the class's stat + half Proficiency,
+// rounded up. Magic: 10 + DEX + half Proficiency, rounded up. Proficiency
+// (Warrior): 10 + DEX + Proficiency. Multiclass uses the primary (first-listed)
+// class. This runs live off classes + level + stats, so it never goes stale.
 function computeUnarmoredAC(char) {
   const classId = charClasses(char)[0]?.classId;
   const variant = UNARMORED_DEFENSE_STAT[classId];
   if (!variant) return null;
   const dex = statMod(char, "dex");
   const prof = profBonusForLevel(charTotalLevel(char));
-  if (variant === "magic" || variant === "prof") {
-    return { value: 10 + dex + Math.floor(prof / 2), formula: `10 + DEX (${dex >= 0 ? "+" : ""}${dex}) + half Proficiency (+${Math.floor(prof/2)})` };
-  }
+  const half = Math.ceil(prof / 2);
+  const sgn = (n) => `${n >= 0 ? "+" : ""}${n}`;
+  if (variant === "prof") return { value: 10 + dex + prof, formula: `10 + DEX (${sgn(dex)}) + Proficiency (+${prof})` };
+  if (variant === "magic") return { value: 10 + dex + half, formula: `10 + DEX (${sgn(dex)}) + half Proficiency (+${half})` };
   const variantMod = statMod(char, variant);
-  return { value: 10 + dex + variantMod, formula: `10 + DEX (${dex >= 0 ? "+" : ""}${dex}) + ${STAT_MOD_LABEL[variant]} (${variantMod >= 0 ? "+" : ""}${variantMod})` };
+  return { value: 10 + dex + variantMod + half, formula: `10 + DEX (${sgn(dex)}) + ${STAT_MOD_LABEL[variant]} (${sgn(variantMod)}) + half Proficiency (+${half})` };
+}
+
+// "If you are wearing Armor you can use your <stat> for AC calculation instead
+// of your Dexterity." The stat a class may swap in for DEX under armor, or null.
+function armoredDefenseStat(char) {
+  const v = UNARMORED_DEFENSE_STAT[charClasses(char)[0]?.classId];
+  return v && v !== "magic" && v !== "prof" ? v : null;
+}
+
+// Magus and Mystic: DR equal to Ki Rank + 1 while not wearing Armor, halved
+// (rounded down) in Armor. Counts toward the DR cap like any other DR.
+function classDefenseDR(char, armored) {
+  if (UNARMORED_DEFENSE_STAT[charClasses(char)[0]?.classId] !== "magic") return 0;
+  const dr = computeKiRank(char) + 1;
+  return armored ? Math.floor(dr / 2) : dr;
 }
 
 export {
@@ -121,4 +138,6 @@ export {
   alignmentAuraColor,
   activeAura,
   computeUnarmoredAC,
+  armoredDefenseStat,
+  classDefenseDR,
 };

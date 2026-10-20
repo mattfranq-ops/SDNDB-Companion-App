@@ -1,9 +1,9 @@
 import { uid } from "../lib/dice.js";
 import { CURRENT_ENV_GRAVITY, CURRENT_HOUSE_RULES, envWeightedRanks } from "../state/hooks.js";
 import { styleFlatMod, styleWeightedRanks } from "../state/registry.js";
-import { benefitsOfPower, charTotalLevel, profBonusForLevel, statMod } from "./core.js";
+import { STAT_MOD_LABEL, benefitsOfPower, charTotalLevel, profBonusForLevel, statMod } from "./core.js";
 import { hasCybernetic } from "./cybernetics.js";
-import { computeUnarmoredAC } from "./spellcasting.js";
+import { armoredDefenseStat, computeUnarmoredAC } from "./spellcasting.js";
 import { envGravityRanks, gravAcclimRanks } from "./universe.js";
 
 /* ===== Equipment: slots, book armor catalog, equipped-item AC/DR ===== */
@@ -69,11 +69,15 @@ function computeAC(char) {
   const extra = bonus + tough + styleAc;
   const bonusLabel = `${bonus ? ` + gear (+${bonus})` : ""}${tough ? ` + Power (+${tough})` : ""}${styleAc ? ` + Style (${styleAc >= 0 ? "+" : ""}${styleAc})` : ""}`;
   if (body) {
-    const dex = statMod(char, "dex");
+    // A class with a stat Unarmored Defense may use that stat instead of DEX in armor.
+    const swap = armoredDefenseStat(char);
+    const dexMod = statMod(char, "dex"), swapMod = swap ? statMod(char, swap) : -Infinity;
+    const dex = Math.max(dexMod, swapMod);
+    const dexName = swapMod > dexMod ? STAT_MOD_LABEL[swap] : "DEX";
     const halfProf = Math.floor(profBonusForLevel(charTotalLevel(char)) / 2);
     let dexPart = 0, dexLabel = "";
-    if (body.acDexMode === "full") { dexPart = dex; dexLabel = ` + DEX (${dex >= 0 ? "+" : ""}${dex})`; }
-    else if (body.acDexMode === "max2") { dexPart = Math.min(dex, 2); dexLabel = ` + DEX (${dexPart >= 0 ? "+" : ""}${dexPart}, max 2)`; }
+    if (body.acDexMode === "full") { dexPart = dex; dexLabel = ` + ${dexName} (${dex >= 0 ? "+" : ""}${dex})`; }
+    else if (body.acDexMode === "max2") { dexPart = Math.min(dex, 2); dexLabel = ` + ${dexName} (${dexPart >= 0 ? "+" : ""}${dexPart}, max 2)`; }
     const profLabel = body.acHalfProf ? ` + half Prof (+${halfProf})` : "";
     const value = (body.acBase || 0) + dexPart + (body.acHalfProf ? halfProf : 0) + extra;
     return { value, formula: `${body.name}: ${body.acBase}${dexLabel}${profLabel}${bonusLabel}`, armored: true, dr: body.dr || 0 };

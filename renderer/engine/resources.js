@@ -56,7 +56,7 @@ function reconcileResources(char) {
   const byKey = Object.fromEntries(existing.filter(r => r.source === "class").map(r => [r.key, r]));
   const nextClass = granted.map(g => {
     const prev = byKey[g.key];
-    if (!prev) return { id: uid(), current: g.max, ...g };
+    if (!prev) return { id: uid(), current: g.reset === "earned" ? 0 : g.max, ...g };
     return { ...prev, ...g, current: Math.min(prev.current ?? g.max, g.max) };
   });
   const next = [...custom, ...nextClass];
@@ -67,12 +67,14 @@ function reconcileResources(char) {
   return same ? null : next;
 }
 // Refill resources on rest, mirroring magicRestPatch. Short: reset "short" to full,
-// "shortHalfLongFull" regains half. Long: everything rest-based tops off. turn/
+// "shortHalfLongFull" regains half. Long: everything rest-based tops off, and
+// "earned" pools (Hype) empty. turn/
 // encounter/manual are left for the player (no auto-trigger until Sessions exist).
 function resourceRestPatch(char, kind) {
   const list = char.resources || [];
   if (!list.length) return null;
   const next = list.map(r => {
+    if (r.reset === "earned") return kind === "long" ? { ...r, current: 0 } : r; // Hype: lost on a Long Rest
     if (kind === "long") return { ...r, current: r.max }; // a full rest tops off every pool
     if (kind === "short" && r.reset === "short") return { ...r, current: r.max };
     if (kind === "short" && r.reset === "shortHalfLongFull") return { ...r, current: Math.min(r.max, (r.current || 0) + Math.ceil(r.max / 2)) };

@@ -5,7 +5,7 @@ import { exhaustionPenalty, exhaustionRanks, inKiExhaustion } from "../../engine
 import { drIgnoredBy, spendPatch } from "../../engine/damage.js";
 import { applyToCombatant } from "../session/apply.js";
 import { STAT_MOD_LABEL, activeConditionPower, activeFormPower, benefitsOfPower, charTotalLevel, computeKiRank, effectivePowerBonus, profBonusForLevel, statMod, totalPowerBonus } from "../../engine/core.js";
-import { TECH_TYPE_ORDER, computeCarryWeight, computeKiRegen, computeOverload, computePassives, computePowerLevel, computeTechRefs } from "../../engine/derived.js";
+import { TECH_TYPE_ORDER, classUnarmed, computeCarryWeight, computeKiRegen, computeOverload, computePassives, computePowerLevel, computeTechRefs } from "../../engine/derived.js";
 import { equippedEntries, weightedPower } from "../../engine/equipment.js";
 import { roll, rollD20, rollModeLabel, uid } from "../../lib/dice.js";
 import { CURRENT_HOUSE_RULES, envFlatMod, useHouseRules } from "../../state/hooks.js";
@@ -118,7 +118,10 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
   // Basic moves: the held weapon's damage logic replaces unarmed CQC (empty
   // hands fall back to CQC); Basic Ki Blast is always there. A weapon's unique
   // effects/charges stay in Advanced Moves, not here.
-  const strMod = statMod(char, "str"), wisMod = statMod(char, "wis");
+  // Dice come from the highest-level class's table; the Unarmed Combat style
+  // picks the best stat it allows for the strike.
+  const unarmed = classUnarmed(char);
+  const strMod = statMod(char, unarmed.strikeStat), wisMod = statMod(char, "wis");
   const profB = profBonusForLevel(charTotalLevel(char));
   const heldWeapons = equippedEntries(char).filter(e => (e.slotKey === "hand1" || e.slotKey === "hand2") && e.item.damageDice);
   const weaponMoves = heldWeapons.map(e => {
@@ -128,8 +131,8 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     return { uid: `wpn-${e.item.id}`, name: e.item.name, techType: "Armed", resolution: "attack", damageDice: dice, kiCost: "", atkOverride: profB + mod, melee };
   });
   const basicMoves = [
-    ...(weaponMoves.length ? weaponMoves : [{ uid: "cqc", name: "CQC (Unarmed Strike)", techType: "Unarmed", resolution: "attack", damageDice: `1d4${strMod>=0?"+":""}${strMod}`, kiCost: "", melee: true }]),
-    { uid: "kiblast", name: "Basic Ki Blast", techType: "Blast", resolution: "attack", damageDice: `1d6${wisMod>=0?"+":""}${wisMod}`, kiCost: "" },
+    ...(weaponMoves.length ? weaponMoves : [{ uid: "cqc", name: unarmed.style ? `Unarmed Strike (${unarmed.style})` : "CQC (Unarmed Strike)", techType: "Unarmed", resolution: "attack", damageDice: `${unarmed.strikeDie}${strMod>=0?"+":""}${strMod}`, kiCost: "", atkOverride: profB + strMod + benefitsOfPower(char).energy, melee: true }]),
+    { uid: "kiblast", name: "Basic Ki Blast", techType: "Blast", resolution: "attack", damageDice: `${unarmed.blastDie}${wisMod>=0?"+":""}${wisMod}`, kiCost: "" },
   ];
   const weaponEffects = heldWeapons.flatMap(e => (e.item.effects || []).map(ef => ({ ...ef, itemName: e.item.name })));
   const specialAll = (char.techniques || []).filter(k => k.damageDice || k.resolution !== "utility");

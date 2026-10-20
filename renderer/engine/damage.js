@@ -1,6 +1,7 @@
 import { roll } from "../lib/dice.js";
 import { benefitsOfPower, charTotalLevel, profBonusForLevel } from "./core.js";
-import { computeArmorDR } from "./equipment.js";
+import { computeAC, computeArmorDR } from "./equipment.js";
+import { classDefenseDR } from "./spellcasting.js";
 
 /* ===== Taking damage and healing (book Ch.1, pp. 7, 9, 21–25) =====
    Pure functions: they take a creature's pools and return a patch, so the
@@ -22,7 +23,8 @@ function drCap(char) {
   return profBonusForLevel(charTotalLevel(char)) + 1;
 }
 function cappedArmorDR(char) {
-  const raw = char.drOverride === true ? (char.dr || 0) : computeArmorDR(char);
+  const armored = !!computeAC(char)?.armored;
+  const raw = (char.drOverride === true ? (char.dr || 0) : computeArmorDR(char)) + classDefenseDR(char, armored);
   return Math.min(raw, drCap(char));
 }
 function totalDR(char) {
