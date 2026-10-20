@@ -8,7 +8,8 @@
     "postbuild": "node -e \"const fs=require('fs');let h=fs.readFileSync('renderer/index.html','utf8').replace('bundle.js','bundle.js?v='+Date.now());fs.writeFileSync('dist/index.html',h)\"",
     "build": "npm run build:renderer && npm run postbuild",
     "start": "npm run build && electron .",
-    "dist:win": "npm run build && electron-builder --win --x64"
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "test": "vitest run"
   },
   "dependencies": {
     "lucide-react": "^0.383.0",
@@ -18,7 +19,8 @@
   "devDependencies": {
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3",
-    "esbuild": "^0.21.5"
+    "esbuild": "^0.21.5",
+    "vitest": "^2.1.9"
   },
   "build": {
     "appId": "com.sdndbz.companion",
