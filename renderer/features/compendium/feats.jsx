@@ -4,7 +4,7 @@ import { FEAT_DATA } from "../../data/feat-data.js";
 import { uid } from "../../lib/dice.js";
 import { applyOverrides, useOverrides, useSharedList } from "../../state/hooks.js";
 import { Btn, EmptyState, ErrorBanner, Field, LoadingBlock, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS, FEAT_LISTS, FEAT_LIST_COLOR } from "../../ui/theme.js";
+import { COLORS, FEAT_LISTS, FEAT_LIST_COLOR, FONTS } from "../../ui/theme.js";
 
 /* ============================== FEATS ============================== */
 const blankCustomFeat = () => ({ id: uid(), name: "New Feat", list: "General", subcategory: "", prerequisite: "", fullText: "", custom: true });
@@ -49,7 +49,7 @@ function FeatsTab() {
     return (
       <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
-          <TextInput value={open.name} onChange={e => upd({ name: e.target.value })} style={{ fontFamily: "Orbitron, sans-serif", fontSize: 17, fontWeight: 700, background: "transparent", border: "none", flex: 1 }} />
+          <TextInput value={open.name} onChange={e => upd({ name: e.target.value })} style={{ fontFamily: FONTS.display, fontSize: 17, fontWeight: 700, background: "transparent", border: "none", flex: 1 }} />
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {isCustom ? <Tag color={COLORS.muted}>Custom</Tag> : edited ? <Tag color={COLORS.amber}>Edited</Tag> : null}
             {edited && <Btn size="sm" onClick={() => clearOverride(open.id)} title="Discard edits, restore the book version"><RotateCcw size={13}/> Reset</Btn>}
@@ -103,7 +103,7 @@ function FeatsTab() {
             <div key={l} style={{ marginBottom: 18 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${COLORS.border}` }}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color }}>{l} Feat List</div>
-                <div style={{ fontSize: 10.5, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>{items.length}</div>
+                <div style={{ fontSize: 10.5, color: COLORS.dim, fontFamily: FONTS.mono }}>{items.length}</div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 }}>
                 {items.map(f => (
@@ -111,7 +111,7 @@ function FeatsTab() {
                     onMouseEnter={ev => ev.currentTarget.style.borderColor = color+"66"} onMouseLeave={ev => ev.currentTarget.style.borderColor = COLORS.border}>
                     {f.custom ? <Tag color={COLORS.muted}>Custom</Tag> : ovMap[f.id] ? <Tag color={COLORS.amber}>Edited</Tag> : null}
                     <div style={{ fontWeight: 700, marginTop: (f.custom || ovMap[f.id]) ? 6 : 0 }}>{f.name}</div>
-                    <div style={{ color: COLORS.muted, fontSize: 11.5, marginTop: 4, fontFamily: "JetBrains Mono, monospace" }}>{f.prerequisite || "No prerequisite"}</div>
+                    <div style={{ color: COLORS.muted, fontSize: 11.5, marginTop: 4, fontFamily: FONTS.mono }}>{f.prerequisite || "No prerequisite"}</div>
                   </div>
                 ))}
               </div>

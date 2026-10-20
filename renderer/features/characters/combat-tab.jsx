@@ -8,7 +8,7 @@ import { roll, rollD20, rollModeLabel, uid } from "../../lib/dice.js";
 import { CURRENT_HOUSE_RULES, envFlatMod, useHouseRules } from "../../state/hooks.js";
 import { hookSummary, hookType, styleFlatMod, useRegistry } from "../../state/registry.js";
 import { Btn, Checkbox, Select, Tag, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { techResColor } from "./forms.jsx";
 import { ResourceTracker } from "./magic.jsx";
 
@@ -145,7 +145,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
           <span style={{ fontWeight: 700, fontSize: 12, lineHeight: 1.2 }}>{mv.name}</span>
           {mv.kiCost && <span style={{ fontSize: 9, color: COLORS.dim, whiteSpace: "nowrap" }}>{mv.kiCost}</span>}
         </div>
-        <div style={{ fontSize: 10, color: COLORS.muted, fontFamily: "JetBrains Mono, monospace" }}>
+        <div style={{ fontSize: 10, color: COLORS.muted, fontFamily: FONTS.mono }}>
           {mv.resolution === "attack" && <span style={{ color: COLORS.blue }}>+{ref.atk} atk</span>}
           {mv.resolution === "save" && <span style={{ color: COLORS.gold }}>DC {ref.dc}{mv.saveAbility ? ` ${mv.saveAbility.slice(0,3)}` : ""}</span>}
           {mv.damageDice && <span> · {mv.damageDice}{mv.attackAction && aaDmg > 0 ? <span style={{ color: COLORS.gold }}> +{aaDmg}</span> : ""}</span>}
@@ -257,7 +257,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
       <div style={{ ...cardStyle, display: "flex", justifyContent: "space-between", alignItems: "center", background: `linear-gradient(90deg, ${COLORS.gold}14, transparent)` }}>
         <div>
           <div style={{ fontSize: 10.5, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1 }}>{power.label}</div>
-          <div style={{ fontFamily: "Orbitron, sans-serif", fontSize: 26, fontWeight: 900, color: COLORS.gold }}>{power.value.toLocaleString()}</div>
+          <div style={{ fontFamily: FONTS.display, fontSize: 26, fontWeight: 900, color: COLORS.gold }}>{power.value.toLocaleString()}</div>
         </div>
         <div style={{ textAlign: "right", fontSize: 11, color: COLORS.dim, lineHeight: 1.6 }}>
           <div>Ki Rank <span style={{ color: COLORS.text, fontWeight: 700 }}>{computeKiRank(char)}</span> · Power <span style={{ color: COLORS.text, fontWeight: 700 }}>{effectivePowerBonus(char) >= 0 ? "+" : ""}{effectivePowerBonus(char)}</span>{(() => {
@@ -324,7 +324,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
           {refs.map(r => (
             <div key={r.type} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 6, padding: "6px 10px" }}>
               <span style={{ fontSize: 11.5 }}>{r.label} <span style={{ color: COLORS.dim, fontSize: 9.5 }}>({STAT_MOD_LABEL[r.stat]})</span></span>
-              <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11.5 }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: 11.5 }}>
                 <span style={{ color: COLORS.blue }} title="Attack Bonus">{r.atk >= 0 ? "+" : ""}{r.atk}</span>
                 <span style={{ color: COLORS.dim }}> / </span>
                 <span style={{ color: COLORS.gold }} title="Save DC">DC {r.dc}</span>
@@ -373,7 +373,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
               <label key={t.uid} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 6, padding: "6px 10px" }}>
                 <Checkbox checked={t.combatVisible !== false} onChange={() => toggleSpecial(t.uid)} />
                 <span style={{ fontWeight: 600, flex: 1 }}>{t.name}</span>
-                <span style={{ color: COLORS.dim, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}>{t.techType}{t.damageDice ? ` · ${t.damageDice}` : ""}</span>
+                <span style={{ color: COLORS.dim, fontSize: 10, fontFamily: FONTS.mono }}>{t.techType}{t.damageDice ? ` · ${t.damageDice}` : ""}</span>
               </label>
             ))}
             {customAdvanced.length > 0 && <div style={{ fontSize: 9.5, color: COLORS.dim, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 4 }}>Custom moves</div>}
@@ -426,7 +426,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
                     <span style={{ fontWeight: 700, fontSize: 12.5 }}>{sd.name}</span>
                     <span style={{ fontSize: 9.5, color: COLORS.dim }}>{sd.limit}</span>
                   </span>
-                  <span style={{ fontSize: 10, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace", whiteSpace: "nowrap" }}>{numeric ? `${sd.cost} Sta` : sd.cost}</span>
+                  <span style={{ fontSize: 10, color: COLORS.gold, fontFamily: FONTS.mono, whiteSpace: "nowrap" }}>{numeric ? `${sd.cost} Sta` : sd.cost}</span>
                   {set && <button onClick={() => useSnap(sd)} title={numeric ? `Spend ${sd.cost} Stamina` : "Log (variable cost)"} style={{ background: `${COLORS.gold}1A`, border: `1px solid ${COLORS.gold}66`, color: COLORS.gold, borderRadius: 5, padding: "3px 10px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>Use</button>}
                 </div>
                 {isOpen && (
@@ -446,7 +446,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
       <div style={{ ...cardStyle, display: "flex", alignItems: "center", gap: 12 }}>
         <div>
           <div style={{ ...headStyle, marginBottom: 2 }}>Breather</div>
-          <div style={{ fontSize: 12.5, color: COLORS.muted }}>Pool <span style={{ color: breatherLeft > 0 ? COLORS.text : COLORS.dim, fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>{breatherLeft} / {breatherMax}</span> <span style={{ color: COLORS.dim, fontSize: 10 }}>(Lv + CON)</span></div>
+          <div style={{ fontSize: 12.5, color: COLORS.muted }}>Pool <span style={{ color: breatherLeft > 0 ? COLORS.text : COLORS.dim, fontWeight: 700, fontFamily: FONTS.mono }}>{breatherLeft} / {breatherMax}</span> <span style={{ color: COLORS.dim, fontSize: 10 }}>(Lv + CON)</span></div>
         </div>
         <div style={{ flex: 1 }} />
         {set && <span onClick={refreshBreather} title="Refill (Long Rest)" style={{ cursor: "pointer", color: COLORS.dim, fontSize: 10 }}>long rest</span>}
@@ -459,14 +459,14 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, marginBottom: 6 }}>
             <span style={{ color: COLORS.muted }}>Gather Ki (Major)</span>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontFamily: "JetBrains Mono, monospace", color: COLORS.blue, fontWeight: 700 }}>+{regen.major}</span>
+              <span style={{ fontFamily: FONTS.mono, color: COLORS.blue, fontWeight: 700 }}>+{regen.major}</span>
               {set && <Btn size="sm" onClick={() => gatherKi("major")} title="Restore Ki (Action); overfill → Temp Ki"><Zap size={12}/> Gather</Btn>}
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
             <span style={{ color: COLORS.muted }}>Gather Ki (Minor)</span>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontFamily: "JetBrains Mono, monospace", color: COLORS.blue, fontWeight: 700 }}>{regen.minorDice}</span>
+              <span style={{ fontFamily: FONTS.mono, color: COLORS.blue, fontWeight: 700 }}>{regen.minorDice}</span>
               {set && <Btn size="sm" onClick={() => gatherKi("minor")} title="Roll & restore Ki (Bonus Action); overfill → Temp Ki"><Zap size={12}/> Gather</Btn>}
             </div>
           </div>
@@ -482,7 +482,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {log.map(r => (
-              <div key={r.id} style={{ fontSize: 11.5, fontFamily: "JetBrains Mono, monospace", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "baseline" }}>
+              <div key={r.id} style={{ fontSize: 11.5, fontFamily: FONTS.mono, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "baseline" }}>
                 <span style={{ fontWeight: 700, color: COLORS.text }}>{r.name}</span>
                 {r.head.kind === "attack" && <span style={{ color: COLORS.blue }}>hit {r.head.hit} <span style={{ color: COLORS.dim }}>(d20 {r.head.d20} +{r.head.atk}{r.head.env ? `${r.head.env >= 0 ? " +" : " "}${r.head.env} mod` : ""})</span></span>}
                 {r.head.kind === "save" && <span style={{ color: COLORS.gold }}>DC {r.head.dc}{r.head.ability ? ` ${r.head.ability}` : ""}</span>}

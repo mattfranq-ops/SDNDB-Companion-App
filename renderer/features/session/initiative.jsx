@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Check, ChevronRight, Crosshair, Dices, Eye, EyeOff, Plus, Radio, RotateCcw, Skull, Sparkles, Swords, Trash2, Users, Wand2, X } from "lucide-react";
-import { useLocalOption } from "../../app/App.jsx";
+import { useLocalOption } from "../../state/local-options.js";
 import { emitNav, emitRoll, logSession } from "../../app/bus.js";
 import { abilityMod, activeFormUpkeep, statMod } from "../../engine/core.js";
 import { computeOverload, powerDR } from "../../engine/derived.js";
@@ -9,7 +9,7 @@ import { isCaster } from "../../engine/spellcasting.js";
 import { roll, uid } from "../../lib/dice.js";
 import { CURRENT_HOUSE_RULES, envDmgPerTurn, envKiCostMult, useSharedList } from "../../state/hooks.js";
 import { Btn, ConfirmBtn, EmptyState, ErrorBanner, LoadingBlock, Tag, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { DyingPanel, StatStepper, blankCombatant } from "./combat-parts.jsx";
 import { advanceTime, readTime } from "./time.jsx";
 
@@ -204,7 +204,7 @@ function InitiativeTab() {
             <button key={m} onClick={() => setSessionView({ mode: m })} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none", background: sessionView.mode === m ? (m === "dm" ? `${COLORS.gold}22` : `${COLORS.blue}22`) : "transparent", color: sessionView.mode === m ? (m === "dm" ? COLORS.gold : COLORS.blue) : COLORS.muted }}><Ico size={13}/> {l}</button>
           ))}
         </div>
-        <div style={{ color: COLORS.muted, fontSize: 12.5, alignSelf: "center", fontFamily: "JetBrains Mono, monospace" }}>Round {data.round}</div>
+        <div style={{ color: COLORS.muted, fontSize: 12.5, alignSelf: "center", fontFamily: FONTS.mono }}>Round {data.round}</div>
         <Btn variant="blue" onClick={nextTurn}><ChevronRight size={14}/> Next Turn</Btn>
         <ConfirmBtn variant="danger" size="md" confirmTitle="Clear the whole encounter" onConfirm={resetCombat}><RotateCcw size={14}/> Reset</ConfirmBtn>
       </div>
@@ -227,7 +227,7 @@ function InitiativeTab() {
                       style={{ display: "flex", alignItems: "center", gap: 6, background: on ? `${COLORS.gold}1A` : COLORS.panel2, border: `1px solid ${on ? COLORS.gold : COLORS.border}`, borderRadius: 7, padding: "6px 10px", cursor: "pointer", color: COLORS.text, fontSize: 12.5 }}>
                       {on ? <Check size={13} color={COLORS.gold}/> : <Plus size={13} color={COLORS.dim}/>}
                       <span style={{ fontWeight: 600 }}>{e.name}</span>
-                      <span style={{ color: COLORS.dim, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{e.hp ?? e.maxHp ?? 0}/{e.maxHp ?? 0} HP</span>
+                      <span style={{ color: COLORS.dim, fontFamily: FONTS.mono, fontSize: 11 }}>{e.hp ?? e.maxHp ?? 0}/{e.maxHp ?? 0} HP</span>
                       {already && <span style={{ color: COLORS.blue, fontSize: 10 }}>linked</span>}
                     </button>
                   );
@@ -402,8 +402,8 @@ function RollsTab() {
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {log.map(r => (
             <div key={r.id} style={{ display: "flex", justifyContent: "space-between", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
-              <span style={{ fontFamily: "JetBrains Mono, monospace", color: COLORS.muted }}>{r.expr} = [{r.rolls.join(", ")}]{r.mod ? (r.mod>0?`+${r.mod}`:r.mod) : ""}</span>
-              <span style={{ fontWeight: 700, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace" }}>{r.total}</span>
+              <span style={{ fontFamily: FONTS.mono, color: COLORS.muted }}>{r.expr} = [{r.rolls.join(", ")}]{r.mod ? (r.mod>0?`+${r.mod}`:r.mod) : ""}</span>
+              <span style={{ fontWeight: 700, color: COLORS.gold, fontFamily: FONTS.mono }}>{r.total}</span>
             </div>
           ))}
         </div>

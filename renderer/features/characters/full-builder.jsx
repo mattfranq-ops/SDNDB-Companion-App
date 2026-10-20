@@ -3,7 +3,7 @@ import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { computeAttacksPerTurn } from "../../engine/derived.js";
 import { computeAC, computeArmorDR } from "../../engine/equipment.js";
 import { Btn } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { BioTab, ClassesTab, FeatsPickerTab, FeaturesTab, TrainingTab } from "./builder-tabs.jsx";
 import { CombatRefTab } from "./combat-tab.jsx";
 import { BenefitsOfPowerCard, ConditionsPanel, FormsTab, PowerOverloadCard } from "./forms.jsx";
@@ -41,7 +41,7 @@ function FullBuilder({ onSave, onCancel }) {
   return (
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 700, fontSize: 16 }}>{char.name || "New Character"}</div>
+        <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 16 }}>{char.name || "New Character"}</div>
         <Btn size="sm" variant="ghost" onClick={onCancel}><X size={15}/></Btn>
       </div>
       <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: `1px solid ${COLORS.border}`, flexWrap: "wrap" }}>

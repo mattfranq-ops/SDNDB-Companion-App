@@ -8,7 +8,7 @@ import { abilityMod } from "../../engine/core.js";
 import { ALL_SKILLS, STAT_KEYS } from "../../engine/skills.js";
 import { pick, uid } from "../../lib/dice.js";
 import { Btn, Field, Gauge, LoadingBlock, Select, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { ANTAGONIST_TYPES, antagonistDerived, usePartyBaseline } from "./antagonist.jsx";
 import { NamedEntryList } from "./sheet.jsx";
 
@@ -99,7 +99,7 @@ function GuidedNpcCreation({ onCreate, onCancel }) {
           <div style={secHead}>Antagonist Level</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <Btn size="sm" onClick={() => upd({ level: Math.max(1, g.level - 1) })}><Minus size={12} /></Btn>
-            <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 900, fontSize: 24, color: COLORS.gold, minWidth: 40, textAlign: "center" }}>{g.level}</span>
+            <span style={{ fontFamily: FONTS.display, fontWeight: 900, fontSize: 24, color: COLORS.gold, minWidth: 40, textAlign: "center" }}>{g.level}</span>
             <Btn size="sm" onClick={() => upd({ level: Math.min(30, g.level + 1) })}><Plus size={12} /></Btn>
             <input type="range" min={1} max={30} value={g.level} onChange={e => upd({ level: +e.target.value })} style={{ flex: 1 }} />
           </div>
@@ -165,7 +165,7 @@ function GuidedNpcCreation({ onCreate, onCancel }) {
                     <Btn size="sm" onClick={() => upd({ stats: { ...g.stats, [k]: Math.max(1, v - 1) } })} style={{ padding: "2px 6px" }}><Minus size={10} /></Btn>
                     <span style={{ width: 26, textAlign: "center", fontWeight: 700, color: over ? COLORS.red : COLORS.text }}>{v}</span>
                     <Btn size="sm" onClick={() => upd({ stats: { ...g.stats, [k]: Math.min(d.abilityCap || 30, v + 1) } })} style={{ padding: "2px 6px" }}><Plus size={10} /></Btn>
-                    <span style={{ width: 22, textAlign: "right", fontSize: 10.5, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace" }}>{abilityMod(v) >= 0 ? "+" : ""}{abilityMod(v)}</span>
+                    <span style={{ width: 22, textAlign: "right", fontSize: 10.5, color: COLORS.gold, fontFamily: FONTS.mono }}>{abilityMod(v) >= 0 ? "+" : ""}{abilityMod(v)}</span>
                   </div>
                 </div>
               );
@@ -198,7 +198,7 @@ function GuidedNpcCreation({ onCreate, onCancel }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 11.5 }}>Legendary Resistance / day</span>
                 <Btn size="sm" onClick={() => upd({ legendaryResistance: Math.max(0, g.legendaryResistance - 1) })}><Minus size={11} /></Btn>
-                <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}>{g.legendaryResistance}</span>
+                <span style={{ fontFamily: FONTS.mono, fontWeight: 700 }}>{g.legendaryResistance}</span>
                 <Btn size="sm" onClick={() => upd({ legendaryResistance: g.legendaryResistance + 1 })}><Plus size={11} /></Btn>
               </div>
               <PhaseThresholdEditor phases={g.phases} onChange={v => upd({ phases: v })} maxHpHint={Math.round((d.avgHpPerDie + conMod) * g.level)} maxPhases={d.maxPhases} />

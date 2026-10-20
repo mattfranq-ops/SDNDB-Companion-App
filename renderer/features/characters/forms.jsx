@@ -5,7 +5,7 @@ import { computeOverload } from "../../engine/derived.js";
 import { AURA_SWATCHES } from "../../engine/spellcasting.js";
 import { uid } from "../../lib/dice.js";
 import { Btn, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 
 const blankForm = () => ({ id: uid(), name: "New Form", formType: "Transformation", powerBonus: 1, bulk: "", upkeepCost: 0, multiplier: "", awakenLimit: "", giga: 0, description: "", active: false, auraColor: "", modifications: [] });
 
@@ -185,7 +185,7 @@ function FormsPlayTab({ char, set }) {
                 <button onClick={() => toggle(i)} title="Toggle active" style={{ background: f.active ? COLORS.gold : "transparent", border: `1px solid ${f.active ? COLORS.gold : COLORS.dim}`, borderRadius: 20, color: f.active ? "#0A0C11" : COLORS.muted, fontSize: 10, fontWeight: 700, padding: "3px 9px", cursor: "pointer" }}>{f.active ? "ACTIVE" : "off"}</button>
                 <span style={{ fontWeight: 700, fontSize: 13, flex: 1 }}>{f.name}</span>
               </div>
-              <div style={{ display: "flex", gap: 12, fontSize: 10.5, color: COLORS.muted, fontFamily: "JetBrains Mono, monospace", marginBottom: f.description ? 6 : 0 }}>
+              <div style={{ display: "flex", gap: 12, fontSize: 10.5, color: COLORS.muted, fontFamily: FONTS.mono, marginBottom: f.description ? 6 : 0 }}>
                 {(f.powerBonus || 0) !== 0 && <span style={{ color: COLORS.gold }}>+{f.powerBonus} Pwr</span>}
                 <span>Upkeep {f.upkeepCost || 0}</span>
                 {f.awakenLimit && <span>Awaken {f.awakenLimit}</span>}

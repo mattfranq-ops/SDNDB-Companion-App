@@ -14,7 +14,7 @@ import { alignmentAuraColor } from "../../engine/spellcasting.js";
 import { pick, roll, uid } from "../../lib/dice.js";
 import { useHouseRules, useSharedList } from "../../state/hooks.js";
 import { Btn, EmptyState, Field, Gauge, InfoChip, LoadingBlock, Select, SelectWithCustom, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS, FEAT_LISTS, FEAT_LIST_COLOR } from "../../ui/theme.js";
+import { COLORS, FEAT_LISTS, FEAT_LIST_COLOR, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "../session/combat-parts.jsx";
 import { RESOURCE_RESET_LABEL } from "./magic.jsx";
 import { useSpeciesList } from "./model.js";
@@ -30,7 +30,7 @@ function ClassPicker({ value, onConfirm, onCancel }) {
         ))}
       </div>
       <div style={{ border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 16 }}>
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{sel}</div>
+        <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{sel}</div>
         <div style={{ height: 1, background: COLORS.border, marginBottom: 10 }} />
         <div style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6, maxHeight: 180, overflowY: "auto" }}>{c.flavor}</div>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
@@ -48,11 +48,11 @@ function AbilityTab({ classId, level }) {
   const lvls = Object.keys(c.featuresByLevel).map(Number).filter(l => l <= (level || 20)).sort((a,b) => a-b);
   return (
     <div>
-      <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{classId} — Level {level}</div>
+      <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{classId} — Level {level}</div>
       <div style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${COLORS.border}` }}>{c.flavor}</div>
       {lvls.map(l => (
         <div key={l} style={{ display: "flex", gap: 12, marginBottom: 8, alignItems: "flex-start" }}>
-          <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 7, background: `${COLORS.blue}15`, border: `1px solid ${COLORS.blue}44`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "JetBrains Mono, monospace", fontSize: 12, color: COLORS.blue, fontWeight: 700 }}>{l}</div>
+          <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 7, background: `${COLORS.blue}15`, border: `1px solid ${COLORS.blue}44`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONTS.mono, fontSize: 12, color: COLORS.blue, fontWeight: 700 }}>{l}</div>
           <div style={{ fontSize: 13, color: COLORS.text, paddingTop: 6 }}>{c.featuresByLevel[l]}</div>
         </div>
       ))}
@@ -302,7 +302,7 @@ function TrainingTab({ char, set }) {
           return (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: COLORS.panel, border: `1px solid ${count > 0 ? COLORS.gold + "55" : COLORS.border}`, borderRadius: 8, padding: "8px 12px" }}>
               <span style={{ fontSize: 12.5, color: COLORS.text, flex: 1 }}>{s}</span>
-              {count > 0 && <span style={{ fontSize: 10.5, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace", whiteSpace: "nowrap" }}>×{count} · {count * cost} TB</span>}
+              {count > 0 && <span style={{ fontSize: 10.5, color: COLORS.gold, fontFamily: FONTS.mono, whiteSpace: "nowrap" }}>×{count} · {count * cost} TB</span>}
               <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                 <button onClick={() => refund(i, cost)} disabled={count === 0} style={{ ...miniBtnStyle, opacity: count === 0 ? 0.35 : 1, cursor: count === 0 ? "default" : "pointer" }} title="Refund one"><Minus size={12}/></button>
                 <span style={{ width: 18, textAlign: "center", fontWeight: 700, fontSize: 13 }}>{count}</span>
@@ -342,7 +342,7 @@ function SkillsSavesTab({ char, set }) {
   };
   const rollBtn = (label, value, color) => (
     <button onClick={e => { e.stopPropagation(); rollCheck(label, value); }} title={`Roll d20 ${value >= 0 ? "+" : ""}${value}`}
-      style={{ display: "flex", alignItems: "center", gap: 4, background: `${color}14`, border: `1px solid ${color}55`, color, borderRadius: 5, padding: "2px 8px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "JetBrains Mono, monospace" }}>
+      style={{ display: "flex", alignItems: "center", gap: 4, background: `${color}14`, border: `1px solid ${color}55`, color, borderRadius: 5, padding: "2px 8px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: FONTS.mono }}>
       <Dices size={11}/>{value >= 0 ? "+" : ""}{value}
     </button>
   );
@@ -358,7 +358,7 @@ function SkillsSavesTab({ char, set }) {
             <span onClick={() => setLog([])} style={{ cursor: "pointer", color: COLORS.dim, fontSize: 9.5, textTransform: "none" }}>clear</span>
           </div>
           {log.map(r => (
-            <div key={r.id} style={{ fontSize: 11.5, fontFamily: "JetBrains Mono, monospace", display: "flex", gap: 8, alignItems: "baseline" }}>
+            <div key={r.id} style={{ fontSize: 11.5, fontFamily: FONTS.mono, display: "flex", gap: 8, alignItems: "baseline" }}>
               <span style={{ fontWeight: 700, color: COLORS.text }}>{r.label}</span>
               <span style={{ color: COLORS.blue, fontWeight: 700 }}>{r.total}</span>
               <span style={{ color: COLORS.dim }}>(d20 {r.d20} {r.bonus >= 0 ? "+" : ""}{r.bonus})</span>
@@ -647,7 +647,7 @@ function LevelUpModal({ char, set, classIndex, onClose }) {
           </div>
           {mode === "roll" && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-              <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 13 }}>{die} rolled <span style={{ color: COLORS.gold, fontWeight: 700 }}>{rolled}</span></span>
+              <span style={{ fontFamily: FONTS.mono, fontSize: 13 }}>{die} rolled <span style={{ color: COLORS.gold, fontWeight: 700 }}>{rolled}</span></span>
               <Btn size="sm" onClick={() => setRolled(roll(dieSize))}><Dices size={13} /> Re-roll</Btn>
             </div>
           )}
@@ -690,7 +690,7 @@ function LevelUpModal({ char, set, classIndex, onClose }) {
               {rows.map(([label, a, b]) => (
                 <div key={label} style={{ display: "flex", fontSize: 12.5 }}>
                   <span style={{ color: COLORS.muted, flex: 1 }}>{label}</span>
-                  <span style={{ fontFamily: "JetBrains Mono, monospace" }}><span style={{ color: COLORS.dim }}>{a}</span> <span style={{ color: COLORS.dim }}>→</span> <span style={{ color: COLORS.gold, fontWeight: 700 }}>{b}</span></span>
+                  <span style={{ fontFamily: FONTS.mono }}><span style={{ color: COLORS.dim }}>{a}</span> <span style={{ color: COLORS.dim }}>→</span> <span style={{ color: COLORS.gold, fontWeight: 700 }}>{b}</span></span>
                 </div>
               ))}
             </div>

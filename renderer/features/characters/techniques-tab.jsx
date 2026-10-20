@@ -5,7 +5,7 @@ import { computeMaxStamina, effectiveStats } from "../../engine/core.js";
 import { TECH_CATEGORIES, TECH_TYPE_ORDER, blankCustomTech, techToKnown, techniquesKnownBudget } from "../../engine/derived.js";
 import { reconcileResources } from "../../engine/resources.js";
 import { Btn, EmptyState, Field, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { techResColor } from "./forms.jsx";
 
 function KnownTechniquesTab({ char, set }) {
@@ -59,7 +59,7 @@ function KnownTechniquesTab({ char, set }) {
               <div key={t.id} onClick={() => !already && addTech(t)} title={t.fullText} style={{ cursor: already ? "default" : "pointer", opacity: already ? 0.45 : 1, background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontWeight: 700, fontSize: 12.5 }}>{t.name}</span>
-                  <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>{t.techType} R{t.kiRank}</span>
+                  <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: FONTS.mono }}>{t.techType} R{t.kiRank}</span>
                 </div>
                 <div style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 3, display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {t.kiCost && <span>{t.kiCost}</span>}
@@ -82,7 +82,7 @@ function KnownTechniquesTab({ char, set }) {
     return (
       <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 700, fontSize: 14 }}>Custom Technique</div>
+          <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 14 }}>Custom Technique</div>
           <Btn size="sm" variant="ghost" onClick={() => { setDraft(null); setMode(null); }}><X size={14}/></Btn>
         </div>
         <Field label="Name"><TextInput value={draft.name} onChange={e => upd({ name: e.target.value })} /></Field>
@@ -141,7 +141,7 @@ function KnownTechniquesTab({ char, set }) {
                   <span style={{ fontWeight: 700, fontSize: 13 }}>{k.name}</span>
                   {k.custom && <Tag color={COLORS.muted}>Custom</Tag>}
                 </div>
-                <div style={{ fontSize: 10.5, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace", marginTop: 2 }}>{[k.techType, k.kiRank && `R${k.kiRank}`, k.kiCost].filter(Boolean).join(" · ")}</div>
+                <div style={{ fontSize: 10.5, color: COLORS.dim, fontFamily: FONTS.mono, marginTop: 2 }}>{[k.techType, k.kiRank && `R${k.kiRank}`, k.kiCost].filter(Boolean).join(" · ")}</div>
                 {k.damageDice && <div style={{ fontSize: 11.5, marginTop: 5, color }}>{k.damageDice} {k.damageType} · <span style={{ textTransform: "capitalize" }}>{k.resolution}</span></div>}
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8 }}>
                   <span style={{ fontSize: 9.5, color: COLORS.dim }}>Mastery</span>

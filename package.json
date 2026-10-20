@@ -4,14 +4,19 @@
   "description": "SDNDBZ Companion - character sheets, combat tracker, NPCs, tables, shared live across the table.",
   "main": "main.js",
   "scripts": {
-    "build:renderer": "esbuild renderer/entry.jsx --bundle --outfile=dist/bundle.js --loader:.js=jsx --define:process.env.NODE_ENV=\\\"production\\\"",
-    "postbuild": "node -e \"const fs=require('fs');let h=fs.readFileSync('renderer/index.html','utf8').replace('bundle.js','bundle.js?v='+Date.now());fs.writeFileSync('dist/index.html',h)\"",
-    "build": "npm run build:renderer && npm run postbuild",
     "start": "npm run build && electron .",
-    "dist:win": "npm run build && electron-builder --win --x64",
-    "test": "vitest run"
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "electron": "electron .",
+    "serve": "node server.js",
+    "test": "vitest run",
+    "dist:win": "npm run build && electron-builder --win --x64"
   },
   "dependencies": {
+    "@fontsource/chakra-petch": "^5.1.0",
+    "@fontsource/inter": "^5.1.0",
+    "@fontsource/jetbrains-mono": "^5.1.0",
+    "@fontsource/orbitron": "^5.1.0",
     "lucide-react": "^0.383.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

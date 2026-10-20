@@ -6,7 +6,7 @@ import { BOOK_EQUIPMENT, catalogKey, slotTypeLabel } from "../../engine/equipmen
 import { uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, EmptyState, ErrorBanner, Field, LoadingBlock, ScannerHeader, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { AbilityTab } from "../characters/builder-tabs.jsx";
 
 /* ============================== COMPENDIUM (Data Pool) ============================== */
@@ -79,7 +79,7 @@ function CompendiumTab() {
   if (open) return (
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-        <TextInput value={open.name} onChange={e => updateEntry(open.id, { name: e.target.value })} style={{ fontFamily: "Orbitron, sans-serif", fontSize: 17, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300 }} />
+        <TextInput value={open.name} onChange={e => updateEntry(open.id, { name: e.target.value })} style={{ fontFamily: FONTS.display, fontSize: 17, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300 }} />
         <div style={{ display: "flex", gap: 8 }}>
           <Btn size="sm" variant="danger" onClick={() => deleteEntry(open.id)}><Trash2 size={13}/></Btn>
           <Btn size="sm" variant="ghost" onClick={() => setOpenId(null)}><X size={15}/></Btn>

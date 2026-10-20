@@ -4,7 +4,7 @@ import { FACTION_COLORS, FACTION_ROOTS, GALAXY_ERAS, GALAXY_SIZES, GRAVITY_EXTRE
 import { pick, uid } from "../../lib/dice.js";
 import { useRegistry } from "../../state/registry.js";
 import { Btn, Checkbox, ConfirmBtn, EmptyState, Field, SciSelect, Select, Tag, TextInput, downloadJSON } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { TagListEditor } from "../characters/items.jsx";
 
 function PlanetCard({ planet, characters, onUpdate, onRemove, readOnly, systemFactionId, faction, onInvest, systemConditions, isPartyHome, onSetPartyHome, isCurrent, onSetLocation }) {
@@ -141,7 +141,7 @@ function PlanetCard({ planet, characters, onUpdate, onRemove, readOnly, systemFa
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
           <TrendingUp size={13} color={COLORS.purple} />
           <span style={{ fontSize: 10.5, color: COLORS.purple, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Influence</span>
-          <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 800, fontSize: 15, color: COLORS.purple }}>{infPool}</span>
+          <span style={{ fontFamily: FONTS.mono, fontWeight: 800, fontSize: 15, color: COLORS.purple }}>{infPool}</span>
           {penalty > 1 && <Tag color={COLORS.red}>×{penalty} impoverished</Tag>}
           <div style={{ flex: 1 }} />
           {canAct && (
@@ -186,7 +186,7 @@ function PlanetCard({ planet, characters, onUpdate, onRemove, readOnly, systemFa
         )}
         {logOpen && (p.influenceLog || []).length > 0 && (
           <div style={{ marginTop: 8, borderTop: `1px solid ${COLORS.border}`, paddingTop: 8, display: "flex", flexDirection: "column", gap: 3 }}>
-            {p.influenceLog.map((e, i) => <div key={i} style={{ fontSize: 10.5, color: COLORS.muted, display: "flex", justifyContent: "space-between", gap: 8 }}><span>{e.text}</span><span style={{ color: e.delta >= 0 ? COLORS.green : COLORS.red, fontFamily: "JetBrains Mono, monospace" }}>{e.delta >= 0 ? "+" : ""}{e.delta}</span></div>)}
+            {p.influenceLog.map((e, i) => <div key={i} style={{ fontSize: 10.5, color: COLORS.muted, display: "flex", justifyContent: "space-between", gap: 8 }}><span>{e.text}</span><span style={{ color: e.delta >= 0 ? COLORS.green : COLORS.red, fontFamily: FONTS.mono }}>{e.delta >= 0 ? "+" : ""}{e.delta}</span></div>)}
           </div>
         )}
       </div>
@@ -213,7 +213,7 @@ function GalaxyForge({ onGenerate }) {
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 20, maxWidth: 640, margin: "0 auto" }}>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
         <Orbit size={34} style={{ color: COLORS.gold, marginBottom: 8 }} />
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 18 }}>Forge a Galaxy</div>
+        <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 18 }}>Forge a Galaxy</div>
         <div style={{ fontSize: 12, color: COLORS.dim, marginTop: 4 }}>Generate the systems and worlds your campaign takes place across. Everything is editable after.</div>
       </div>
       <div style={{ fontSize: 10.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Size</div>
@@ -324,7 +324,7 @@ function GalaxySpiral({ galaxy, selectedId, onSelect, claimFactionId, onToggleCl
     <svg ref={svgRef} viewBox={`0 0 ${S} ${S}`}
       onMouseMove={onMouseMove} onMouseUp={endDrag} onMouseLeave={endDrag}
       onTouchMove={onMouseMove} onTouchEnd={endDrag}
-      style={{ width: "100%", aspectRatio: "1 / 1", display: "block", background: "radial-gradient(circle at 50% 50%, #131a2b 0%, #0b0e17 70%)", borderRadius: 12, border: `1px solid ${COLORS.border}`, touchAction: "none" }}>
+      style={{ width: "100%", aspectRatio: "1 / 1", display: "block", background: `radial-gradient(circle at 50% 50%, ${COLORS.panel2} 0%, ${COLORS.deep} 70%)`, borderRadius: 12, border: `1px solid ${COLORS.border}`, touchAction: "none" }}>
       <defs>
         <radialGradient id="galaxyCore" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#8fb4ff" stopOpacity="0.5" />
@@ -359,10 +359,10 @@ function GalaxySpiral({ galaxy, selectedId, onSelect, claimFactionId, onToggleCl
         return (
           <g key={s.id} onMouseDown={(e) => startDrag(e, s)} onTouchStart={(e) => startDrag(e, s)} style={{ cursor: canDrag ? (dragging ? "grabbing" : "grab") : "pointer", opacity: nomatch ? 0.18 : 1 }}>
             {hit && <circle cx={p.x * S} cy={p.y * S} r={r + 9} fill="none" stroke={COLORS.blue} strokeWidth={3} opacity={0.9} style={{ filter: `drop-shadow(0 0 8px ${COLORS.blue})` }} />}
-            <circle cx={p.x * S} cy={p.y * S} r={r} fill={c} stroke={sel ? "#fff" : undiscovered ? "#8fa2c8" : (hasHome ? COLORS.gold : "#0b0e17")} strokeWidth={sel ? 3 : hasHome ? 3 : 2} strokeDasharray={undiscovered ? "4 3" : undefined} style={{ filter: `drop-shadow(0 0 ${sel || dragging ? 10 : 5}px ${c})` }} />
+            <circle cx={p.x * S} cy={p.y * S} r={r} fill={c} stroke={sel ? "#fff" : undiscovered ? "#8fa2c8" : (hasHome ? COLORS.gold : COLORS.deep)} strokeWidth={sel ? 3 : hasHome ? 3 : 2} strokeDasharray={undiscovered ? "4 3" : undefined} style={{ filter: `drop-shadow(0 0 ${sel || dragging ? 10 : 5}px ${c})` }} />
             {s.id === homeSysId && (
               <g transform={`translate(${p.x * S}, ${p.y * S - r - 18}) scale(1.5)`} style={{ pointerEvents: "none" }}>
-                <path d="M-8,5 L-8.5,-5 L-3.5,0 L0,-7 L3.5,0 L8.5,-5 L8,5 Z" fill={COLORS.gold} stroke="#0b0e17" strokeWidth="0.8" style={{ filter: `drop-shadow(0 0 4px ${COLORS.gold})` }} />
+                <path d="M-8,5 L-8.5,-5 L-3.5,0 L0,-7 L3.5,0 L8.5,-5 L8,5 Z" fill={COLORS.gold} stroke={COLORS.deep} strokeWidth="0.8" style={{ filter: `drop-shadow(0 0 4px ${COLORS.gold})` }} />
               </g>
             )}
             {s.id === currentSysId && (
@@ -374,7 +374,7 @@ function GalaxySpiral({ galaxy, selectedId, onSelect, claimFactionId, onToggleCl
                 <path d="M0,-12 L7,8 L0,3.5 L-7,8 Z" fill={COLORS.blue} stroke="#eaf4ff" strokeWidth="1" style={{ filter: `drop-shadow(0 0 6px ${COLORS.blue})` }} />
               </g>
             )}
-            {(sel || claimFactionId || dragging || hit) && <text x={p.x * S} y={p.y * S - 20} textAnchor="middle" fontSize="22" fill="#cdd6ea" fontFamily="Inter, sans-serif">{s.name.replace(/ System$/, "")}</text>}
+            {(sel || claimFactionId || dragging || hit) && <text x={p.x * S} y={p.y * S - 20} textAnchor="middle" fontSize="22" fill="#cdd6ea" fontFamily={FONTS.body}>{s.name.replace(/ System$/, "")}</text>}
           </g>
         );
       })}
@@ -404,7 +404,7 @@ function NewSystemModal({ galaxy, onCreate, onCancel }) {
     <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 20, width: 460, maxWidth: "100%", maxHeight: "90vh", overflowY: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 16 }}>New System</div>
+          <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 16 }}>New System</div>
           <div style={{ flex: 1 }} />
           <Btn size="sm" variant="ghost" onClick={onCancel}><X size={15} /></Btn>
         </div>
@@ -459,7 +459,7 @@ function SolarSystemView({ system, characters, faction, isDM, onBack, onUpdatePl
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
         <Btn size="sm" variant="ghost" onClick={onBack}><ArrowLeft size={14} /> Galaxy</Btn>
         <div style={{ width: 16, height: 16, borderRadius: "50%", background: faction?.color || star.color, boxShadow: `0 0 12px ${faction?.color || star.color}` }} />
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 17 }}>{system.name.replace(/ System$/, "")} System</div>
+        <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 17 }}>{system.name.replace(/ System$/, "")} System</div>
         <span style={{ fontSize: 11.5, color: COLORS.dim }}>{star.type} · {n} planet{n === 1 ? "" : "s"}</span>
         {faction && <Tag color={faction.color}>{faction.name} territory</Tag>}
         {traits.map(t => <Tag key={t.name} color={COLORS.amber}>{t.name}</Tag>)}
@@ -492,7 +492,7 @@ function SolarSystemView({ system, characters, faction, isDM, onBack, onUpdatePl
       )}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div style={{ flex: "1 1 300px", minWidth: 260, position: "sticky", top: 8 }}>
-          <svg viewBox={`0 0 ${S} ${S}`} style={{ width: "100%", aspectRatio: "1 / 1", background: "radial-gradient(circle at 50% 50%, #10131f 0%, #0b0e17 70%)", borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
+          <svg viewBox={`0 0 ${S} ${S}`} style={{ width: "100%", aspectRatio: "1 / 1", background: `radial-gradient(circle at 50% 50%, ${COLORS.panel} 0%, ${COLORS.deep} 70%)`, borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
             {rings.map((ring, i) => <circle key={"o" + i} cx={S / 2} cy={S / 2} r={ring.r * S} fill="none" stroke="#2a3350" strokeWidth="1" opacity="0.5" />)}
             {twin ? <>
               <circle cx={S / 2 - 11} cy={S / 2} r={13} fill={star.color} style={{ filter: `drop-shadow(0 0 14px ${star.color})` }} />
@@ -500,8 +500,8 @@ function SolarSystemView({ system, characters, faction, isDM, onBack, onUpdatePl
             </> : <circle cx={S / 2} cy={S / 2} r={16} fill={star.color} style={{ filter: `drop-shadow(0 0 16px ${star.color})` }} />}
             {rings.map((ring) => { const c = planetClass(ring.p.class || ring.p.biome); return (
               <g key={ring.p.id}>
-                <circle cx={ring.x * S} cy={ring.y * S} r={ring.p.id === partyHomeId ? 10 : 8} fill={c.color} stroke={ring.p.id === partyHomeId ? COLORS.gold : "#0b0e17"} strokeWidth="2" style={{ filter: `drop-shadow(0 0 6px ${c.color})` }} />
-                <text x={ring.x * S} y={ring.y * S - 14} textAnchor="middle" fontSize="12" fill="#cdd6ea" fontFamily="Inter, sans-serif">{ring.p.name}</text>
+                <circle cx={ring.x * S} cy={ring.y * S} r={ring.p.id === partyHomeId ? 10 : 8} fill={c.color} stroke={ring.p.id === partyHomeId ? COLORS.gold : COLORS.deep} strokeWidth="2" style={{ filter: `drop-shadow(0 0 6px ${c.color})` }} />
+                <text x={ring.x * S} y={ring.y * S - 14} textAnchor="middle" fontSize="12" fill="#cdd6ea" fontFamily={FONTS.body}>{ring.p.name}</text>
               </g>
             ); })}
           </svg>
@@ -666,7 +666,7 @@ function GalaxyMap({ galaxy, characters, onChange, isDM }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 16 }}>{galaxy.name}</div>
+        <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 16 }}>{galaxy.name}</div>
         <Tag color={COLORS.purple}>{GALAXY_SIZES[galaxy.size]?.label}</Tag>
         <Tag color={COLORS.blue}>{GALAXY_ERAS[galaxy.era]?.label}</Tag>
         <span style={{ fontSize: 11.5, color: COLORS.dim }}>{isDM ? `${galaxy.systems.length} systems (${discoveredCount} revealed)` : `${visibleSystems.length} systems`} · {totalPlanets} planets{partyHomePlanet ? <> · <span style={{ color: COLORS.gold }}>Home: {partyHomePlanet.name}</span></> : ""}{visibleFactions.length ? ` · ${visibleFactions.length} factions` : ""}</span>
@@ -691,7 +691,7 @@ function GalaxyMap({ galaxy, characters, onChange, isDM }) {
       {/* Attribute filter — find worlds by any trait instead of hunting the map */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap", background: filterActive ? `${COLORS.blue}0E` : COLORS.panel, border: `1px solid ${filterActive ? COLORS.blue + "55" : COLORS.border}`, borderRadius: 8, padding: "8px 10px" }}>
         <Search size={14} color={filterActive ? COLORS.blue : COLORS.muted} />
-        <span style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, fontFamily: "JetBrains Mono, monospace" }}>Find Worlds</span>
+        <span style={{ fontSize: 11, color: COLORS.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, fontFamily: FONTS.mono }}>Find Worlds</span>
         <SciSelect value={filter.attr} onChange={k => setFilter({ attr: k, value: "" })} width={160} placeholder="Attribute"
           options={GALAXY_FILTERS.map(f => ({ value: f.key, label: f.label }))} />
         {filter.attr && (
@@ -750,8 +750,8 @@ function GalaxyMap({ galaxy, characters, onChange, isDM }) {
                     <TrendingUp size={11} color={COLORS.purple} />
                     <span style={{ fontSize: 9.5, color: COLORS.dim, textTransform: "uppercase", letterSpacing: 0.5 }}>Influence</span>
                     {isDM
-                      ? <input type="number" value={f.influence || 0} onChange={e => updateFaction(f.id, { influence: Math.max(0, +e.target.value || 0) })} title="Faction Influence treasury — set an exact amount (keep it scarce)" style={{ width: 58, background: "transparent", border: `1px solid ${COLORS.border}`, borderRadius: 4, color: COLORS.purple, fontWeight: 700, fontSize: 12, fontFamily: "JetBrains Mono, monospace", textAlign: "center", outline: "none", padding: "2px 4px" }} />
-                      : <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700, fontSize: 12, color: COLORS.purple }}>{f.influence || 0}</span>}
+                      ? <input type="number" value={f.influence || 0} onChange={e => updateFaction(f.id, { influence: Math.max(0, +e.target.value || 0) })} title="Faction Influence treasury — set an exact amount (keep it scarce)" style={{ width: 58, background: "transparent", border: `1px solid ${COLORS.border}`, borderRadius: 4, color: COLORS.purple, fontWeight: 700, fontSize: 12, fontFamily: FONTS.mono, textAlign: "center", outline: "none", padding: "2px 4px" }} />
+                      : <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 12, color: COLORS.purple }}>{f.influence || 0}</span>}
                   </div>
                 </div>
               );
@@ -789,7 +789,7 @@ function GalaxyMap({ galaxy, characters, onChange, isDM }) {
           <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
               <div style={{ width: 16, height: 16, borderRadius: "50%", background: factionOf(selected.factionId)?.color || selected.star.color, boxShadow: `0 0 10px ${(factionOf(selected.factionId)?.color || selected.star.color)}aa` }} />
-              <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 15 }}>{selected.name.replace(/ System$/, "")}</div>
+              <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 15 }}>{selected.name.replace(/ System$/, "")}</div>
               <span style={{ fontSize: 11, color: COLORS.dim }}>{selected.star.type} · {selected.planets.length} planet{selected.planets.length === 1 ? "" : "s"}</span>
               {factionOf(selected.factionId) && <Tag color={factionOf(selected.factionId).color}>{factionOf(selected.factionId).name} territory</Tag>}
               {isDM && !selected.discovered && <Tag color={COLORS.dim}>Hidden from players</Tag>}
@@ -813,7 +813,7 @@ function GalaxyMap({ galaxy, characters, onChange, isDM }) {
                     <Tag color={c.color}>{p.class || p.biome}</Tag>
                     <Tag color={habColor(p.habitability || c.hab)}>{p.habitability || c.hab}</Tag>
                   </div>
-                  <div style={{ fontSize: 10, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>{p.gravity ?? "—"}g · {p.economy !== "Uninhabited" ? p.economy : "Uninhabited"}</div>
+                  <div style={{ fontSize: 10, color: COLORS.dim, fontFamily: FONTS.mono }}>{p.gravity ?? "—"}g · {p.economy !== "Uninhabited" ? p.economy : "Uninhabited"}</div>
                 </div>
               ); })}
             </div>

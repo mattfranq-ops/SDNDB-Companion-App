@@ -1,10 +1,10 @@
 import React, { useState, useRef } from "react";
 import { ChevronLeft, ChevronRight, Minus, Plus, Upload, X } from "lucide-react";
-import { useLocalOption } from "../../app/App.jsx";
+import { useLocalOption } from "../../state/local-options.js";
 import { activeForms } from "../../engine/core.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, LoadingBlock, Select, Tag, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "./combat-parts.jsx";
 
 // Tactical battle map. Tokens come from the initiative tracker; drag to move on
@@ -110,8 +110,8 @@ function MapTab() {
             return (
               <g key={c.id} onMouseDown={(e) => { e.preventDefault(); setSelId(c.id); setDragPos({ id: c.id, x: p.x, y: p.y }); }} style={{ cursor: "grab" }}>
                 {alt > 0 && <circle cx={cx} cy={cy} r={r + 3} fill="none" stroke={color} strokeWidth={1} strokeDasharray="2 2" opacity={0.6} />}
-                <circle cx={cx} cy={cy} r={r} fill={color} stroke={on ? COLORS.gold : "#0b0e17"} strokeWidth={on ? 2.5 : 1.5} />
-                <text x={cx} y={cy + fs / 3} textAnchor="middle" fontSize={fs} fontWeight="700" fill="#0b0e17">{(c.name || "?").slice(0, 2)}</text>
+                <circle cx={cx} cy={cy} r={r} fill={color} stroke={on ? COLORS.gold : COLORS.deep} strokeWidth={on ? 2.5 : 1.5} />
+                <text x={cx} y={cy + fs / 3} textAnchor="middle" fontSize={fs} fontWeight="700" fill={COLORS.deep}>{(c.name || "?").slice(0, 2)}</text>
                 {alt > 0 && <text x={cx} y={cy - r - 3} textAnchor="middle" fontSize={9} fill={color} fontWeight="700">↑{alt}</text>}
                 {form && <text x={cx} y={cy + r + 11} textAnchor="middle" fontSize={9} fill={color} fontWeight="700">{form.name}</text>}
               </g>
@@ -157,7 +157,7 @@ function MapDrawer() {
       </button>
       <div style={{ position: "fixed", top: 0, right: 0, height: "100vh", width, maxWidth: "94vw", background: COLORS.bg, borderLeft: `1px solid ${COLORS.border}`, zIndex: 59, transform: `translateX(${open ? 0 : 100}%)`, transition: "transform .25s ease", boxShadow: open ? "-10px 0 34px rgba(0,0,0,.45)" : "none", overflowY: "auto", padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 900, fontSize: 16, color: COLORS.gold, letterSpacing: 1 }}>BATTLE MAP</span>
+          <span style={{ fontFamily: FONTS.display, fontWeight: 900, fontSize: 16, color: COLORS.gold, letterSpacing: 1 }}>BATTLE MAP</span>
           <Btn size="sm" variant="ghost" onClick={() => setUi({ open: false })}><X size={16} /></Btn>
         </div>
         {open && <MapTab />}

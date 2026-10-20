@@ -3,7 +3,7 @@ import { Dices, Minus, Plus } from "lucide-react";
 import { roll, uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, Gauge, Tag, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 
 /* ============================== SESSION (Initiative / Rolls / Details) ============================== */
 const blankCombatant = () => ({ id: uid(), name: "New Combatant", init: 10, hp: 20, maxHp: 20, ki: 0, maxKi: 0, stamina: 0, maxStamina: 0, dr: 0, conditions: [], deathSaves: { success: 0, fail: 0 }, exhaustion: 0, dead: false, sourceId: null, sourceType: null });
@@ -96,7 +96,7 @@ function SessionFeed() {
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {feed.slice(0, 10).map(e => (
           <div key={e.id} style={{ display: "flex", gap: 8, fontSize: 12.5, alignItems: "baseline" }}>
-            <span style={{ color: COLORS.dim, fontFamily: "JetBrains Mono, monospace", fontSize: 10.5, minWidth: 46 }}>{new Date(e.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            <span style={{ color: COLORS.dim, fontFamily: FONTS.mono, fontSize: 10.5, minWidth: 46 }}>{new Date(e.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
             <span style={{ color: COLORS.text }}>{e.text}</span>
           </div>
         ))}

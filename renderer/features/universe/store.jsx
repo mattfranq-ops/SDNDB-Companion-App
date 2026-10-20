@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Coins, MapPin, Orbit, Rocket, RotateCcw } from "lucide-react";
-import { useLocalOption } from "../../app/App.jsx";
+import { useLocalOption } from "../../state/local-options.js";
 import { RARITY_TIERS, rarityInfo } from "../../data/book-tables.js";
 import { HIGH_TECH_PARTS } from "../../data/hightech-data.js";
 import { BOOK_EQUIPMENT, slotTypeLabel } from "../../engine/equipment.js";
@@ -8,7 +8,7 @@ import { UNI_TECH, ensureGalaxyLayout } from "../../engine/universe.js";
 import { uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, EmptyState, ErrorBanner, LoadingBlock, ScannerHeader, Select, Tag } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { GalaxyForge, GalaxyMap } from "./galaxy-views.jsx";
 
 /* ===== Store & Night Market economics — planet-contextual pricing and stock.
@@ -108,7 +108,7 @@ function MarketHeader({ galaxy, current, chars, shopperId, setShopperId, onSetLo
           <option value="">— who's buying —</option>
           {chars.filter(c => !c.archived).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
-        {shopper && <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}><Coins size={15} color={COLORS.gold} /><span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 800, fontSize: 18, color: COLORS.gold }}>Ƶ {(shopper.zeni || 0).toLocaleString()}</span></div>}
+        {shopper && <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}><Coins size={15} color={COLORS.gold} /><span style={{ fontFamily: FONTS.mono, fontWeight: 800, fontSize: 18, color: COLORS.gold }}>Ƶ {(shopper.zeni || 0).toLocaleString()}</span></div>}
       </div>
     </div>
   );
@@ -124,12 +124,12 @@ function StoreItemCard({ item, price, base, canBuy, reason, onBuy }) {
         <Tag color={rc}>{rarityInfo(item.rarity).label}</Tag>
       </div>
       {item.kind === "equipment"
-        ? <div style={{ fontSize: 11, color: COLORS.muted, fontFamily: "JetBrains Mono, monospace" }}>{[item.acBase ? `AC ${item.acBase}` : null, item.acBonus ? `+${item.acBonus} AC` : null, item.dr ? `DR ${item.dr}` : null, slotTypeLabel(item.slot)].filter(Boolean).join(" · ")}</div>
-        : <div style={{ fontSize: 11, color: COLORS.blue, fontFamily: "JetBrains Mono, monospace" }}>Integration DC {item.integrationDC}</div>}
+        ? <div style={{ fontSize: 11, color: COLORS.muted, fontFamily: FONTS.mono }}>{[item.acBase ? `AC ${item.acBase}` : null, item.acBonus ? `+${item.acBonus} AC` : null, item.dr ? `DR ${item.dr}` : null, slotTypeLabel(item.slot)].filter(Boolean).join(" · ")}</div>
+        : <div style={{ fontSize: 11, color: COLORS.blue, fontFamily: FONTS.mono }}>Integration DC {item.integrationDC}</div>}
       {(item.notes || item.effect) && <div style={{ fontSize: 11.5, color: COLORS.muted, lineHeight: 1.45 }}>{item.notes || item.effect}</div>}
       <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: `1px solid ${COLORS.border}` }}>
         <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-          <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: COLORS.gold }}>Ƶ {price.toLocaleString()}</span>
+          <span style={{ fontFamily: FONTS.mono, fontWeight: 700, color: COLORS.gold }}>Ƶ {price.toLocaleString()}</span>
           {discounted && <span style={{ fontSize: 10, color: COLORS.dim, textDecoration: "line-through" }}>Ƶ {base.toLocaleString()}</span>}
         </span>
         <Btn size="sm" variant="gold" disabled={!canBuy} title={canBuy ? "Buy" : reason} onClick={onBuy} style={!canBuy ? { opacity: 0.5, cursor: "not-allowed" } : {}}>Buy</Btn>

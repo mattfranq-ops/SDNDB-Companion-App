@@ -9,7 +9,7 @@ import { activeAura, isCaster, spellStats } from "../../engine/spellcasting.js";
 import { gravAcclimRanks, gravityColor } from "../../engine/universe.js";
 import { useHouseRules } from "../../state/hooks.js";
 import { Tag } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { BodyFigure } from "./items.jsx";
 
 // Scouter sheet — dense, read-only, everything-computed overview of a character.
@@ -20,13 +20,13 @@ const SC = {
   card: { background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 12 },
   head: { fontSize: 10, color: COLORS.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
   label: { fontSize: 9, color: COLORS.dim, textTransform: "uppercase", letterSpacing: 0.5 },
-  mono: { fontFamily: "JetBrains Mono, monospace" },
+  mono: { fontFamily: FONTS.mono },
 };
 function ScTile({ label, value, sub, color = COLORS.text }) {
   return (
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 4px", textAlign: "center", minWidth: 0 }}>
       <div style={SC.label}>{label}</div>
-      <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 17, color, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 17, color, lineHeight: 1.1 }}>{value}</div>
       {sub != null && <div style={{ fontSize: 8.5, color: COLORS.dim }}>{sub}</div>}
     </div>
   );
@@ -66,7 +66,7 @@ function ScouterSheet({ char }) {
         {char.pictureUrl && <img src={char.pictureUrl} alt="" style={{ width: 96, height: 96, borderRadius: 12, objectFit: "cover", border: `1px solid ${COLORS.border}`, flexShrink: 0 }} onError={e => { e.currentTarget.style.display = "none"; }} />}
         <div style={{ position: "relative", width: 66, height: 101, flexShrink: 0 }}><BodyFigure aura={aura} stroke={aura || COLORS.blue} /></div>
         <div style={{ flex: 1, minWidth: 160 }}>
-          <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 22, lineHeight: 1.1 }}>{char.name || "—"}</div>
+          <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 22, lineHeight: 1.1 }}>{char.name || "—"}</div>
           <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 3 }}>{classLine} · {char.species || "—"}{char.subspecies ? ` (${char.subspecies})` : ""}</div>
           <div style={{ fontSize: 11, color: COLORS.dim, marginTop: 2 }}>Lv {charTotalLevel(char)} · Ki Rank {computeKiRank(char)} · Prof +{prof}{char.alignment ? ` · ${char.alignment}` : ""}{char.heritage ? ` · ${char.heritage}` : ""}</div>
           {(char.homeworld || (houseRules.gravityAcclimation && char.accustomedGravity > 0)) && (
@@ -79,7 +79,7 @@ function ScouterSheet({ char }) {
         </div>
         <div style={{ textAlign: "right", minWidth: 120 }}>
           <div style={SC.label}>{power.label}</div>
-          <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 900, fontSize: 26, color: COLORS.gold, lineHeight: 1 }}>{power.value.toLocaleString()}</div>
+          <div style={{ fontFamily: FONTS.display, fontWeight: 900, fontSize: 26, color: COLORS.gold, lineHeight: 1 }}>{power.value.toLocaleString()}</div>
           <div style={{ ...SC.label, marginTop: 4 }}>Carry {computeCarryWeight(char).toLocaleString()} lb</div>
         </div>
       </div>
@@ -106,7 +106,7 @@ function ScouterSheet({ char }) {
             return (
               <div key={k} style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 4px", textAlign: "center" }}>
                 <div style={SC.label}>{k}</div>
-                <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 18, lineHeight: 1.1 }}>{mod >= 0 ? "+" : ""}{mod}</div>
+                <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 18, lineHeight: 1.1 }}>{mod >= 0 ? "+" : ""}{mod}</div>
                 <div style={{ ...SC.mono, fontSize: 10, color: COLORS.muted }}>{effectiveStats(char)[k]}</div>
                 <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "center", marginTop: 4, fontSize: 10, color: save.proficient ? COLORS.gold : COLORS.dim }}>
                   <ScProfDot state={save.proficient} /> save {save.value >= 0 ? "+" : ""}{save.value}

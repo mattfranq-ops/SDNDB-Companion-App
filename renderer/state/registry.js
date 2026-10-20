@@ -208,7 +208,7 @@ function useRegistry(key) {
     else save({ ov: { ...ov, [id]: { ...(ov[id] || {}), ...p } } });
   };
   const toggleEnabled = (id) => save({ off: off.includes(id) ? off.filter(x => x !== id) : [...off, id] });
-  const addCustom = (seed) => { const id = uid(); save({ custom: [...customs, { _id: id, name: seed && seed.name ? seed.name : "New " + cat.label.replace(/s$/, ""), desc: "", rarity: "common", effect: { text: "", hooks: [] }, ...(seed || {}), _id: id }] }); return id; };
+  const addCustom = (seed) => { const id = uid(); save({ custom: [...customs, { name: seed && seed.name ? seed.name : "New " + cat.label.replace(/s$/, ""), desc: "", rarity: "common", effect: { text: "", hooks: [] }, ...(seed || {}), _id: id }] }); return id; };
   const removeEntry = (id) => { const e = entries.find(x => x._id === id); if (e && e._custom) save({ custom: customs.filter(c => (c._id || c.id) !== id), off: off.filter(x => x !== id) }); };
   const resetEntry = (id) => { const nov = { ...ov }; delete nov[id]; save({ ov: nov, off: off.filter(x => x !== id) }); };
   return { cat, loading: state === null, entries, setPatch, toggleEnabled, addCustom, removeEntry, resetEntry };

@@ -5,7 +5,7 @@ import { computeBattlePower } from "../../engine/derived.js";
 import { roll } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, ConfirmBtn, LoadingBlock, Select, Tag, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { migrateNpc } from "../npcs/creation.jsx";
 import { blankCombatant } from "./combat-parts.jsx";
 import { advanceTime, readTime } from "./time.jsx";
@@ -149,7 +149,7 @@ function QuickCombatTab() {
           <TextInput value={a.name} onChange={e => setArmy(side, { name: e.target.value })} style={{ fontWeight: 800, fontSize: 14, background: "transparent", border: "none", padding: 0 }} />
           <span style={{ fontSize: 11, fontWeight: 700, color: mColor, whiteSpace: "nowrap" }}>Morale {a.morale}</span>
         </div>
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontSize: 20, fontWeight: 900, color: armyColor(side) }}>{strengthOf(a).toLocaleString()}</div>
+        <div style={{ fontFamily: FONTS.display, fontSize: 20, fontWeight: 900, color: armyColor(side) }}>{strengthOf(a).toLocaleString()}</div>
         <div style={{ fontSize: 10, color: COLORS.dim, marginBottom: 8 }}>fielded strength</div>
         {bar(a.morale, 100, mColor)}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
@@ -195,7 +195,7 @@ function QuickCombatTab() {
         <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14 }}>
           <div style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>The Party</div>
           <div style={{ fontSize: 13 }}>{party.length} fighter{party.length === 1 ? "" : "s"}</div>
-          <div style={{ fontFamily: "Orbitron, sans-serif", fontSize: 22, fontWeight: 900, color: COLORS.gold }}>{partyBP.toLocaleString()}</div>
+          <div style={{ fontFamily: FONTS.display, fontSize: 22, fontWeight: 900, color: COLORS.gold }}>{partyBP.toLocaleString()}</div>
           <div style={{ fontSize: 10.5, color: COLORS.dim }}>total Battle Power</div>
         </div>
         <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14 }}>
@@ -210,7 +210,7 @@ function QuickCombatTab() {
             </div>
             <div><div style={{ fontSize: 10, color: COLORS.muted, marginBottom: 3 }}>Battle Power each</div><TextInput type="number" value={enemyUnit} onChange={e => { setEnemyUnit(e.target.value); setEnemyNpcId(""); }} placeholder="0" style={{ width: 96, textAlign: "center" }} /></div>
           </div>
-          <div style={{ fontFamily: "Orbitron, sans-serif", fontSize: 18, fontWeight: 900, color: COLORS.red, marginTop: 6 }}>{enemyBP.toLocaleString()}</div>
+          <div style={{ fontFamily: FONTS.display, fontSize: 18, fontWeight: 900, color: COLORS.red, marginTop: 6 }}>{enemyBP.toLocaleString()}</div>
           <div style={{ fontSize: 10.5, color: COLORS.dim }}>total Battle Power</div>
         </div>
       </div>
@@ -222,7 +222,7 @@ function QuickCombatTab() {
       {result && (
         <div style={{ background: `${outcomeColor(result.tone)}12`, border: `1px solid ${outcomeColor(result.tone)}55`, borderRadius: 12, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <span style={{ fontFamily: "Orbitron, sans-serif", fontSize: 20, fontWeight: 900, color: outcomeColor(result.tone) }}>{result.name}</span>
+            <span style={{ fontFamily: FONTS.display, fontSize: 20, fontWeight: 900, color: outcomeColor(result.tone) }}>{result.name}</span>
             {result.applied && <Tag color={COLORS.green}>applied</Tag>}
           </div>
           <div style={{ fontSize: 13.5, color: COLORS.text, marginBottom: 10 }}>{result.blurb}</div>
@@ -241,7 +241,7 @@ function QuickCombatTab() {
       {mode === "war" && (war ? (
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-            <span style={{ fontFamily: "Orbitron, sans-serif", fontSize: 16, fontWeight: 900, color: COLORS.gold }}>Round {war.round}</span>
+            <span style={{ fontFamily: FONTS.display, fontSize: 16, fontWeight: 900, color: COLORS.gold }}>Round {war.round}</span>
             {war.over && <Tag color={war.over === "enemy" ? COLORS.green : war.over === "party" ? COLORS.red : COLORS.amber}>{war.over === "enemy" ? "Enemy routed" : war.over === "party" ? "Your forces routed" : "Both sides shattered"}</Tag>}
             <div style={{ flex: 1 }} />
             <ConfirmBtn size="md" variant="danger" confirmTitle="End this war" onConfirm={endWar}><RotateCcw size={14}/> End war</ConfirmBtn>

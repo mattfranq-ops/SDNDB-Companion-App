@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { ArrowLeft, Check, ChevronDown, ChevronUp, Crosshair, Dices, Eye, EyeOff, Plus, RotateCcw, Swords, Trash2, X } from "lucide-react";
-import { useLocalOption } from "../../app/App.jsx";
+import { useLocalOption } from "../../state/local-options.js";
 import { STAT_KEYS } from "../../engine/skills.js";
 import { rint } from "../../engine/universe.js";
 import { roll, uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { HOOK_TYPES, REGISTRY_CATS, REGISTRY_GROUPS, REG_RARITY_TIERS, blankHook, hookSummary, hookType, regRarityInfo, useProposals, useRegistry, weightedPickEntries } from "../../state/registry.js";
 import { Btn, Field, LoadingBlock, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { blankCombatant } from "../session/combat-parts.jsx";
 
 // One editable form field for a hook parameter, keyed off its declared kind.
@@ -92,7 +92,7 @@ function WorldRulesTab() {
                 <c.icon size={22} color={c.color} style={{ marginBottom: 8 }} />
                 <div style={{ fontWeight: 700, fontSize: 13 }}>{c.label}</div>
                 <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 2 }}>{c.base().length} entries</div>
-                {isDM && pendingBy[c.key] > 0 && <span style={{ position: "absolute", top: 10, right: 10, background: COLORS.gold, color: "#0b0e17", fontSize: 10, fontWeight: 800, borderRadius: 10, padding: "1px 7px" }}>{pendingBy[c.key]}</span>}
+                {isDM && pendingBy[c.key] > 0 && <span style={{ position: "absolute", top: 10, right: 10, background: COLORS.gold, color: COLORS.deep, fontSize: 10, fontWeight: 800, borderRadius: 10, padding: "1px 7px" }}>{pendingBy[c.key]}</span>}
               </div>
             ))}
           </div>
@@ -130,7 +130,7 @@ function RegistryCategoryView({ catKey, isDM, onBack }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
         <Btn size="sm" variant="ghost" onClick={onBack}><ArrowLeft size={14} /> All categories</Btn>
-        <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 15 }}>{cat.label}</span>
+        <span style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 15 }}>{cat.label}</span>
         <div style={{ flex: 1 }} />
         <Btn size="sm" variant="gold" onClick={startDraft}><Plus size={13} /> {isDM ? "Add entry" : "Propose entry"}</Btn>
       </div>
@@ -248,7 +248,7 @@ function WarGoalBuilder() {
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <Swords size={16} color={COLORS.red} />
-        <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 14 }}>War Goal</span>
+        <span style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 14 }}>War Goal</span>
         <div style={{ flex: 1 }} />
         <Btn size="sm" variant="gold" onClick={rollGoal}><Dices size={13} /> {result ? "Reroll" : "Roll"}</Btn>
       </div>
@@ -285,7 +285,7 @@ function RaidPartyBuilder() {
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <Crosshair size={16} color={COLORS.amber} />
-        <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 14 }}>Raid Party</span>
+        <span style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 14 }}>Raid Party</span>
         <div style={{ flex: 1 }} />
         <Btn size="sm" variant="gold" onClick={rollParty}><Dices size={13} /> {result ? "Reroll" : "Roll"}</Btn>
       </div>
@@ -300,7 +300,7 @@ function RaidPartyBuilder() {
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {result.roster.map((r, i) => (
               <div key={i} style={{ display: "flex", gap: 8, fontSize: 12.5 }}>
-                <span style={{ color: COLORS.amber, fontWeight: 700, fontFamily: "JetBrains Mono, monospace", minWidth: 28 }}>{r.count}x</span>
+                <span style={{ color: COLORS.amber, fontWeight: 700, fontFamily: FONTS.mono, minWidth: 28 }}>{r.count}x</span>
                 <span>{r.role}</span>
               </div>
             ))}

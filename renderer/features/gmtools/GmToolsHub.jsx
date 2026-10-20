@@ -6,7 +6,7 @@ import { gravAcclimRanks, gravityColor } from "../../engine/universe.js";
 import { uid } from "../../lib/dice.js";
 import { attunementCapFor, useHouseRules, useSharedList } from "../../state/hooks.js";
 import { Btn, CommaNumInput, EmptyState, Field, LoadingBlock, ScannerHeader, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 
 /* ============================== GM TOOLS HUB ============================== */
 function DmPlaybookTab() {
@@ -71,7 +71,7 @@ function DmPlaybookTab() {
           <div key={section.section} style={{ marginBottom: 14 }}>
             <div onClick={() => toggleSection(section.section)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <ChevronRight size={14} style={open ? { transform: "rotate(90deg)" } : undefined} color={COLORS.gold} />
-              <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 700, fontSize: 14, color: COLORS.gold }}>{section.section}</div>
+              <div style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 14, color: COLORS.gold }}>{section.section}</div>
               {homebrewSection && <Tag color={COLORS.gold}>Homebrew</Tag>}
             </div>
             {open && section.entries.map((e, i) => (
@@ -138,7 +138,7 @@ function HighTechCompendiumTab() {
           <div key={p.id} style={{ background: COLORS.panel2, border: `1px solid ${isCustom(p.id) ? COLORS.gold + "55" : COLORS.border}`, borderRadius: 10, padding: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, gap: 8 }}>
               <span style={{ fontWeight: 700, fontSize: 13 }}>{p.name}{isCustom(p.id) && <Tag color={COLORS.gold} style={{ marginLeft: 6 }}>Homebrew</Tag>}</span>
-              <span style={{ fontSize: 10, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace", display: "flex", alignItems: "center", gap: 6 }}>DC {p.integrationDC} · Ƶ{(p.zeni || 0).toLocaleString()}{isCustom(p.id) && <Trash2 size={12} color={COLORS.red} style={{ cursor: "pointer" }} onClick={() => remove(p.id)} />}</span>
+              <span style={{ fontSize: 10, color: COLORS.dim, fontFamily: FONTS.mono, display: "flex", alignItems: "center", gap: 6 }}>DC {p.integrationDC} · Ƶ{(p.zeni || 0).toLocaleString()}{isCustom(p.id) && <Trash2 size={12} color={COLORS.red} style={{ cursor: "pointer" }} onClick={() => remove(p.id)} />}</span>
             </div>
             {p.effect && <div style={{ fontSize: 11.5, color: COLORS.muted, lineHeight: 1.5, marginBottom: 6 }}>{p.effect}</div>}
             {p.advancedTech && <div style={{ fontSize: 11, color: COLORS.blue, lineHeight: 1.5 }}><span style={{ color: COLORS.dim, textTransform: "uppercase", fontSize: 9, letterSpacing: 0.5 }}>Advanced Tech</span><br />{p.advancedTech}</div>}
@@ -158,7 +158,7 @@ function MateroidsFlavorsTab() {
         <div style={{ width: 15, height: 15, borderRadius: "50%", border: `2px solid ${active ? COLORS.gold : COLORS.muted}`, background: active ? COLORS.gold : "transparent", flexShrink: 0 }} />
         <div style={{ fontWeight: 700, fontSize: 14, color: active ? COLORS.gold : COLORS.text }}>{title}</div>
       </div>
-      <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11, color: COLORS.blue, marginBottom: 8, lineHeight: 1.5 }}>{formula}</div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.blue, marginBottom: 8, lineHeight: 1.5 }}>{formula}</div>
       <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.55 }}>{blurb}</div>
     </div>
   );
@@ -217,7 +217,7 @@ function MateroidsFlavorsTab() {
                 return (
                   <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, padding: "5px 8px", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8 }}>
                     <span style={{ fontWeight: 700, flex: 1, minWidth: 0 }}>{c.name}</span>
-                    <span style={{ color: gravityColor(c.accustomedGravity), fontFamily: "JetBrains Mono, monospace" }}>{c.accustomedGravity ? `${c.accustomedGravity}×g` : "—"}</span>
+                    <span style={{ color: gravityColor(c.accustomedGravity), fontFamily: FONTS.mono }}>{c.accustomedGravity ? `${c.accustomedGravity}×g` : "—"}</span>
                     {r > 0 ? <Tag color={COLORS.green}>Lightweight +{r}</Tag> : <span style={{ fontSize: 10.5, color: COLORS.dim }}>no bonus (&lt;10×)</span>}
                   </div>
                 );

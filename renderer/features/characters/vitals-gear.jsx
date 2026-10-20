@@ -11,7 +11,7 @@ import { activeAura } from "../../engine/spellcasting.js";
 import { uid } from "../../lib/dice.js";
 import { attunementCapFor, useHouseRules } from "../../state/hooks.js";
 import { Btn, Checkbox, CommaNumInput, Gauge, Select, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { BodyFigure, ItemsEditor, SLOT_POS, TagListEditor } from "./items.jsx";
 import { ResourceTracker, magicRestPatch } from "./magic.jsx";
 import { DeathSavesPanel } from "./stats-tab.jsx";
@@ -286,7 +286,7 @@ function EquippedTab({ char, set }) {
                     style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, cursor: here ? "default" : "pointer",
                       background: here ? `${rar.color}22` : COLORS.panel, border: `1px solid ${here ? rar.color + "99" : COLORS.border}`, color: COLORS.text, textAlign: "left" }}>
                     <span style={{ fontWeight: 600, fontSize: 12, color: rar.color }}>{it.name}</span>
-                    <span style={{ fontSize: 10, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>{it.slot === "body" ? `AC ${it.acBase}` : it.acBonus ? `+${it.acBonus} AC` : ""}{it.dr ? ` · DR ${it.dr}` : ""}{it.damageDice ? ` · ${it.damageDice}` : ""}</span>
+                    <span style={{ fontSize: 10, color: COLORS.dim, fontFamily: FONTS.mono }}>{it.slot === "body" ? `AC ${it.acBase}` : it.acBonus ? `+${it.acBonus} AC` : ""}{it.dr ? ` · DR ${it.dr}` : ""}{it.damageDice ? ` · ${it.damageDice}` : ""}</span>
                   </button>
                 );
               })}
@@ -353,7 +353,7 @@ function CyberneticsPanel({ char, set }) {
     <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
         <span style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Cybernetics — High-Tech Parts</span>
-        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 12, color: overLimit ? COLORS.red : COLORS.text }}>{used} / {limit}</span>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: overLimit ? COLORS.red : COLORS.text }}>{used} / {limit}</span>
         <span style={{ fontSize: 10, color: COLORS.dim }}>limit = ½(CON+WIS mod)</span>
         {installed.some(c => c.signature) && <span style={{ fontSize: 10, color: COLORS.gold }}>+ signature (free)</span>}
         <label style={{ marginLeft: "auto", fontSize: 10.5, color: COLORS.muted, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
@@ -373,7 +373,7 @@ function CyberneticsPanel({ char, set }) {
             <div key={u} style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                 <span style={{ fontWeight: 700, fontSize: 12.5 }}>{def.name}</span>
-                <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>DC {def.integrationDC}</span>
+                <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: FONTS.mono }}>DC {def.integrationDC}</span>
                 {def.integrates && <span style={{ fontSize: 8.5, color: COLORS.green, textTransform: "uppercase", letterSpacing: 0.5 }}>auto</span>}
                 <span onClick={() => toggleSig(u)} title="Mark as your free Signature Upgrade (doesn't count against the Limit)" style={{ marginLeft: "auto", cursor: "pointer", fontSize: 10, color: signature ? COLORS.gold : COLORS.dim }}>{signature ? "★ signature" : "☆ signature"}</span>
                 <span onClick={() => remove(u)} style={{ cursor: "pointer", color: COLORS.dim }}><Trash2 size={12} /></span>
@@ -395,7 +395,7 @@ function CyberneticsPanel({ char, set }) {
               <div key={p.id} onClick={() => install(p.id)} title={p.advancedTech} style={{ cursor: "pointer", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 9 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontWeight: 700, fontSize: 12 }}>{p.name}</span>
-                  <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>DC {p.integrationDC} · Ƶ{p.zeni.toLocaleString()}</span>
+                  <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: FONTS.mono }}>DC {p.integrationDC} · Ƶ{p.zeni.toLocaleString()}</span>
                 </div>
                 <div style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 3, lineHeight: 1.4 }}>{p.effect}</div>
               </div>

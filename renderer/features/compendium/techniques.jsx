@@ -4,7 +4,7 @@ import { TECHNIQUE_DATA } from "../../data/technique-data.js";
 import { TECH_CATEGORIES, TECH_TYPE_ORDER } from "../../engine/derived.js";
 import { applyOverrides, useOverrides } from "../../state/hooks.js";
 import { Btn, EmptyState, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { techResColor } from "../characters/forms.jsx";
 
 const TECH_CAT_COLOR = { "Generic": "blue", "Super Line": "purple", "External Super Line": "amber", "Miscellaneous Super": "green", "Ultimate": "red" };
@@ -41,7 +41,7 @@ function TechniquesCompendiumTab() {
               <Tag color={rescolor}>{open.resolution}</Tag>
               {edited && <Tag color={COLORS.amber}>Edited</Tag>}
             </div>
-            <div style={{ fontFamily: "Orbitron, sans-serif", fontSize: 18, fontWeight: 700, marginTop: 8 }}>{open.name}</div>
+            <div style={{ fontFamily: FONTS.display, fontSize: 18, fontWeight: 700, marginTop: 8 }}>{open.name}</div>
             {open.lineName && open.lineName !== open.name && <div style={{ fontSize: 11.5, color: COLORS.dim }}>{open.lineName} line</div>}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -110,7 +110,7 @@ function TechniquesCompendiumTab() {
           {TECH_TYPE_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
         </Select>
       </div>
-      <div style={{ fontSize: 10.5, color: COLORS.dim, marginBottom: 12, fontFamily: "JetBrains Mono, monospace" }}>{visible.length} shown</div>
+      <div style={{ fontSize: 10.5, color: COLORS.dim, marginBottom: 12, fontFamily: FONTS.mono }}>{visible.length} shown</div>
       {visible.length === 0 ? (
         <EmptyState icon={Zap} title="No techniques match" body="Try a different search, category, or type." />
       ) : (
@@ -123,7 +123,7 @@ function TechniquesCompendiumTab() {
                 onMouseEnter={ev => ev.currentTarget.style.borderColor = color+"66"} onMouseLeave={ev => ev.currentTarget.style.borderColor = COLORS.border}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 6 }}>
                   <span style={{ fontWeight: 700, fontSize: 13 }}>{t.name}{ovMap[t.id] && <span style={{ color: COLORS.amber, fontSize: 9.5, marginLeft: 5 }}>• edited</span>}</span>
-                  <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace", whiteSpace: "nowrap" }}>{t.techType} R{t.kiRank}</span>
+                  <span style={{ fontSize: 9.5, color: COLORS.dim, fontFamily: FONTS.mono, whiteSpace: "nowrap" }}>{t.techType} R{t.kiRank}</span>
                 </div>
                 <div style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 4, display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {t.kiCost && <span>{t.kiCost}</span>}

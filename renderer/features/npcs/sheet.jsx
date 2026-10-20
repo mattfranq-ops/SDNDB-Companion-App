@@ -6,7 +6,7 @@ import { abilityMod } from "../../engine/core.js";
 import { STAT_KEYS } from "../../engine/skills.js";
 import { isCaster } from "../../engine/spellcasting.js";
 import { Btn, EmptyState, Field, Gauge, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { CombatRefTab } from "../characters/combat-tab.jsx";
 import { ConditionsPanel, FormsPlayTab, FormsTab } from "../characters/forms.jsx";
 import { MagicTab } from "../characters/magic.jsx";
@@ -88,7 +88,7 @@ function BookAntagonistBrowser({ onPick }) {
           return (
             <div key={b.id} onClick={() => onPick(b)} style={{ cursor: "pointer", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 10, display: "flex", gap: 10 }}
               onMouseEnter={e => e.currentTarget.style.borderColor = COLORS.purple + "66"} onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}>
-              <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 8, background: `${tc}1A`, border: `1px solid ${tc}55`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 16, color: tc }}>{(b.name || "?").charAt(0).toUpperCase()}</div>
+              <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 8, background: `${tc}1A`, border: `1px solid ${tc}55`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONTS.display, fontWeight: 800, fontSize: 16, color: tc }}>{(b.name || "?").charAt(0).toUpperCase()}</div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {b.tier && <Tag color={tc}>{b.tier}</Tag>}
@@ -96,7 +96,7 @@ function BookAntagonistBrowser({ onPick }) {
                 </div>
                 <div style={{ fontWeight: 700, fontSize: 12.5, marginTop: 4 }}>{b.name}</div>
                 <div style={{ fontSize: 10.5, color: COLORS.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{[b.saga, b.group].filter(Boolean).join(" · ")}</div>
-                <div style={{ fontSize: 10, marginTop: 3, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>
+                <div style={{ fontSize: 10, marginTop: 3, color: COLORS.dim, fontFamily: FONTS.mono }}>
                   HP {b.hp}{b.powerLevel != null ? ` · PL ${b.powerLevel.toLocaleString()}` : ""}
                 </div>
               </div>
@@ -188,7 +188,7 @@ function EditableStatBlock({ npc, onUpdate }) {
             <div key={k} style={{ background: COLORS.panel, border: `1px solid ${over ? COLORS.red : COLORS.border}`, borderRadius: 6, padding: "5px 4px", textAlign: "center" }}>
               <div style={{ fontSize: 9, color: COLORS.muted, textTransform: "uppercase" }}>{k}</div>
               <input type="number" value={v} onChange={e => set({ stats: { ...npc.stats, [k]: +e.target.value } })} style={{ width: "100%", textAlign: "center", background: "transparent", border: "none", color: over ? COLORS.red : COLORS.text, fontWeight: 700, fontSize: 14, outline: "none" }} />
-              <div style={{ fontSize: 9.5, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace" }}>{abilityMod(v) >= 0 ? "+" : ""}{abilityMod(v)}</div>
+              <div style={{ fontSize: 9.5, color: COLORS.gold, fontFamily: FONTS.mono }}>{abilityMod(v) >= 0 ? "+" : ""}{abilityMod(v)}</div>
             </div>
           );
         })}
@@ -210,7 +210,7 @@ function EditableStatBlock({ npc, onUpdate }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 11.5, color: COLORS.text }}>Legendary Resistance</span>
             <Btn size="sm" onClick={() => set({ legendaryResistance: { ...npc.legendaryResistance, max: Math.max(0, (npc.legendaryResistance?.max || 0) - 1), used: Math.min(npc.legendaryResistance?.used || 0, Math.max(0, (npc.legendaryResistance?.max || 0) - 1)) } })}><Minus size={11} /></Btn>
-            <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}>{npc.legendaryResistance?.max || 0}/day</span>
+            <span style={{ fontFamily: FONTS.mono, fontWeight: 700 }}>{npc.legendaryResistance?.max || 0}/day</span>
             <Btn size="sm" onClick={() => set({ legendaryResistance: { ...npc.legendaryResistance, max: (npc.legendaryResistance?.max || 0) + 1 } })}><Plus size={11} /></Btn>
           </div>
           <NamedEntryList label="Iconic Actions" entries={npc.iconicActions} onChange={v => set({ iconicActions: v })} color={COLORS.red} namePlaceholder="Iconic Action" />
@@ -374,7 +374,7 @@ function NpcSheet({ npc, onUpdate, onRemove, onClose }) {
   return (
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <TextInput value={npc.name} onChange={e => set({ name: e.target.value })} style={{ fontFamily: "Orbitron, sans-serif", fontSize: 17, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300 }} />
+        <TextInput value={npc.name} onChange={e => set({ name: e.target.value })} style={{ fontFamily: FONTS.display, fontSize: 17, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300 }} />
         <div style={{ display: "flex", gap: 8 }}>
           <Btn size="sm" variant={tab === "growth" ? "gold" : "default"} onClick={() => setTab(tab === "growth" ? "sheet" : "growth")}><TrendingUp size={13} /> Growth</Btn>
           <Btn size="sm" variant="danger" onClick={onRemove}><Trash2 size={13} /></Btn>

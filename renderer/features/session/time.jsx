@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Home as HomeIcon, Minus, Plus, X } from "lucide-react";
-import { useLocalOption } from "../../app/App.jsx";
+import { useLocalOption } from "../../state/local-options.js";
 import { uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, Field, LoadingBlock, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "./combat-parts.jsx";
 
 function SessionDetailsTab() {
@@ -83,7 +83,7 @@ function SessionClockTab() {
     <div>
       <div style={{ border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 22, textAlign: "center", marginBottom: 16, background: `linear-gradient(180deg, ${COLORS.gold}0C, transparent)` }}>
         <div style={{ fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1.2 }}>{weekdayOf(age, month, day)}, {CAL_MONTHS[month - 1]} {day} · Age {age}</div>
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontSize: 50, fontWeight: 900, color: COLORS.gold, lineHeight: 1.1 }}>{hh}:{mm}<span style={{ fontSize: 26, color: COLORS.dim }}>:{ss}</span></div>
+        <div style={{ fontFamily: FONTS.display, fontSize: 50, fontWeight: 900, color: COLORS.gold, lineHeight: 1.1 }}>{hh}:{mm}<span style={{ fontSize: 26, color: COLORS.dim }}>:{ss}</span></div>
         <div style={{ fontSize: 13, color: COLORS.blue, fontWeight: 700, letterSpacing: 0.5 }}>{TIME_PHASE(minutes)}</div>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
@@ -169,7 +169,7 @@ function SessionCalendar() {
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <CalendarDays size={16} color={COLORS.gold} />
         <button onClick={() => shiftMonth(-1)} style={miniBtnStyle}><ChevronLeft size={14} /></button>
-        <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 15, minWidth: 190, textAlign: "center" }}>{CAL_MONTHS[vm.month - 1]} · Age {vm.age}</span>
+        <span style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 15, minWidth: 190, textAlign: "center" }}>{CAL_MONTHS[vm.month - 1]} · Age {vm.age}</span>
         <button onClick={() => shiftMonth(1)} style={miniBtnStyle}><ChevronRight size={14} /></button>
         <Btn size="sm" variant="ghost" onClick={() => { setView({ age: t.age, month: t.month }); setSelDay(t.day); }}>Today</Btn>
         <div style={{ flex: 1 }} />
@@ -249,7 +249,7 @@ function SessionCalendar() {
             {upcoming.map(e => (
               <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                 <span style={{ width: 6, height: 6, borderRadius: 3, background: evColor(e) }} />
-                <span style={{ color: COLORS.dim, fontFamily: "JetBrains Mono, monospace", fontSize: 11, minWidth: 130 }}>{CAL_MONTHS[e.month - 1].slice(0, 3)} {e.day} · Age {e.age}</span>
+                <span style={{ color: COLORS.dim, fontFamily: FONTS.mono, fontSize: 11, minWidth: 130 }}>{CAL_MONTHS[e.month - 1].slice(0, 3)} {e.day} · Age {e.age}</span>
                 <span>{e.title}</span>
                 {e.dm && <Tag color={COLORS.gold}>DM</Tag>}
               </div>

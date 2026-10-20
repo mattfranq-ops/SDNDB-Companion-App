@@ -7,7 +7,7 @@ import { STAT_KEYS } from "../../engine/skills.js";
 import { SPELL_SCHOOLS, defaultCasterAbility, fullCasterSlots, mysticLevel, spellStats } from "../../engine/spellcasting.js";
 import { roll, uid } from "../../lib/dice.js";
 import { Btn, Field, Select, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "../session/combat-parts.jsx";
 
 // Limited-use resource pools (class-granted + custom). Full mode (Vitals) can add
@@ -48,13 +48,13 @@ function ResourceTracker({ char, set, compact = false }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
             <span style={{ fontWeight: 700, fontSize: 12.5, color: COLORS.text }}>{r.name}</span>
-            {r.die && <span style={{ fontSize: 9.5, color: COLORS.blue, fontFamily: "JetBrains Mono, monospace" }}>{r.die}</span>}
+            {r.die && <span style={{ fontSize: 9.5, color: COLORS.blue, fontFamily: FONTS.mono }}>{r.die}</span>}
             {r.source === "class" && <span style={{ fontSize: 8.5, color: COLORS.dim, textTransform: "uppercase", letterSpacing: 0.5 }}>class</span>}
           </div>
           {!compact && <div style={{ fontSize: 10, color: COLORS.dim }}>{RESOURCE_RESET_LABEL[r.reset] || r.reset}{r.note ? ` · ${r.note}` : ""}</div>}
-          {flash && flash.id === r.id && <div style={{ fontSize: 10.5, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace" }}>rolled {r.die} → {flash.value}</div>}
+          {flash && flash.id === r.id && <div style={{ fontSize: 10.5, color: COLORS.gold, fontFamily: FONTS.mono }}>rolled {r.die} → {flash.value}</div>}
         </div>
-        <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700, minWidth: 44, textAlign: "center" }}>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 700, minWidth: 44, textAlign: "center" }}>
           <span style={{ color: (r.current || 0) > 0 ? COLORS.text : COLORS.dim }}>{r.current || 0}</span>
           <span style={{ color: COLORS.dim, fontWeight: 400 }}> / {r.max}</span>
         </span>

@@ -1,6 +1,6 @@
 import React from "react";
 import { Check, ChevronDown, ChevronUp, Dices, Flame, MapPin, Weight, X, Zap } from "lucide-react";
-import { useLocalOption } from "../../app/App.jsx";
+import { useLocalOption } from "../../state/local-options.js";
 import { logSession } from "../../app/bus.js";
 import { normHazard, weatherMatchesEntry } from "../../engine/environment.js";
 import { computeSaveBonus } from "../../engine/skills.js";
@@ -9,7 +9,7 @@ import { roll } from "../../lib/dice.js";
 import { envEffectSummary, envFlatMod, useHouseRules, useSharedList } from "../../state/hooks.js";
 import { hookSummary, hookType, useRegistry } from "../../state/registry.js";
 import { Btn, Select, Tag } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 
 // The party's current Universe planet, surfaced during play (Slice 2c). Shows
 // gravity, weather and star conditions so the environment is present in the fight.
@@ -112,7 +112,7 @@ function HazardsPanel() {
         <Flame size={14} color={COLORS.amber} />
         <span style={{ fontSize: 12, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Environmental Hazards</span>
         {activeCount > 0 && <Tag color={COLORS.amber}>{activeCount} active</Tag>}
-        <span style={{ fontSize: 11, color: COLORS.dim, fontFamily: "JetBrains Mono, monospace" }}>Hour {hours}</span>
+        <span style={{ fontSize: 11, color: COLORS.dim, fontFamily: FONTS.mono }}>Hour {hours}</span>
         <div style={{ flex: 1 }} />
         {collapsed ? <ChevronDown size={16} color={COLORS.muted}/> : <ChevronUp size={16} color={COLORS.muted}/>}
       </div>

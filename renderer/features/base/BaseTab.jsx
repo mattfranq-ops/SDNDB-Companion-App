@@ -4,7 +4,7 @@ import { UNI_STABILITY, UNI_WEALTH } from "../../engine/universe.js";
 import { uid } from "../../lib/dice.js";
 import { useHouseRules, useSharedList } from "../../state/hooks.js";
 import { Btn, LoadingBlock, ScannerHeader, Tag, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "../session/combat-parts.jsx";
 import { absDay, readTime } from "../session/time.jsx";
 
@@ -66,7 +66,7 @@ function ResourceLedger({ resources, onChange }) {
           <p.icon size={18} color={p.color} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 9.5, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{p.label}</div>
-            <TextInput type="number" value={resources[p.key] || 0} onChange={e => onChange({ [p.key]: Math.max(0, +e.target.value || 0) })} style={{ padding: "2px 6px", fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: p.color }} />
+            <TextInput type="number" value={resources[p.key] || 0} onChange={e => onChange({ [p.key]: Math.max(0, +e.target.value || 0) })} style={{ padding: "2px 6px", fontFamily: FONTS.mono, fontWeight: 700, color: p.color }} />
           </div>
         </div>
       ))}
@@ -84,7 +84,7 @@ function FacilitySection({ label, Icon, color, locationNode, extra, facilities, 
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
         <Icon size={18} color={color} />
-        <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 14 }}>{label}</span>
+        <span style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 14 }}>{label}</span>
         {capacity != null && <Tag color={facilities.length >= capacity ? COLORS.red : color}>{facilities.length}/{capacity} bays</Tag>}
         {locationNode}
         <div style={{ flex: 1 }} />
@@ -100,7 +100,7 @@ function FacilitySection({ label, Icon, color, locationNode, extra, facilities, 
               onMouseEnter={e => { if (afford) e.currentTarget.style.borderColor = f.color + "88"; }} onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}><f.icon size={15} color={f.color} /><span style={{ fontWeight: 700, fontSize: 12.5 }}>{(f.tiers && f.tiers[0]) || f.name}</span></div>
               <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{f.desc}</div>
-              <div style={{ fontSize: 10, color: afford ? COLORS.gold : COLORS.red, marginTop: 5, fontFamily: "JetBrains Mono, monospace" }}>Build: {costLabel(cost)}</div>
+              <div style={{ fontSize: 10, color: afford ? COLORS.gold : COLORS.red, marginTop: 5, fontFamily: FONTS.mono }}>Build: {costLabel(cost)}</div>
             </div>
           ); })}
         </div>
@@ -124,7 +124,7 @@ function FacilitySection({ label, Icon, color, locationNode, extra, facilities, 
               <div style={{ fontSize: 10, color: COLORS.dim, marginBottom: 6 }}>{def.name}{f.customName ? "" : ` · Tier ${lvl}`}</div>
               <div style={{ fontSize: 11.5, color: COLORS.muted, marginBottom: 8 }}>{def.desc}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 10, color: maxed ? COLORS.gold : (canUp ? COLORS.gold : COLORS.red), flex: 1, fontFamily: "JetBrains Mono, monospace" }}>{maxed ? "Max tier" : `Upgrade: ${costLabel(upCost)}`}</span>
+                <span style={{ fontSize: 10, color: maxed ? COLORS.gold : (canUp ? COLORS.gold : COLORS.red), flex: 1, fontFamily: FONTS.mono }}>{maxed ? "Max tier" : `Upgrade: ${costLabel(upCost)}`}</span>
                 <button onClick={() => onDowngrade(f.id)} disabled={lvl <= 1} title="Downgrade" style={{ ...miniBtnStyle, opacity: lvl <= 1 ? 0.4 : 1 }}><Minus size={13} /></button>
                 <button onClick={() => canUp && onUpgrade(f.id)} disabled={!canUp} title={maxed ? "At max tier" : canUp ? "Upgrade" : "Not enough resources"} style={{ ...miniBtnStyle, opacity: canUp ? 1 : 0.4 }}><TrendingUp size={13} /></button>
               </div>
@@ -152,7 +152,7 @@ function BaseStatBlock({ stats, onChange, noun = "base" }) {
   const breached = si <= 0;
   const bar = (cur, max, color, label) => (
     <div style={{ flex: "1 1 150px", minWidth: 130 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: COLORS.muted, marginBottom: 3, fontFamily: "JetBrains Mono, monospace" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: COLORS.muted, marginBottom: 3, fontFamily: FONTS.mono }}>
         <span>{label}</span><span style={{ color: cur <= 0 ? COLORS.red : COLORS.text }}>{cur} / {max}</span>
       </div>
       <div style={{ height: 10, background: COLORS.panel, borderRadius: 6, overflow: "hidden", border: `1px solid ${COLORS.border}` }}>
@@ -219,7 +219,7 @@ function GovernancePanel({ base, planet, onChange }) {
   const row = (label, val, color, strong) => (
     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "2px 0" }}>
       <span style={{ color: COLORS.muted }}>{label}</span>
-      <span style={{ color: color || COLORS.text, fontWeight: strong ? 700 : 400, fontFamily: "JetBrains Mono, monospace" }}>{val}</span>
+      <span style={{ color: color || COLORS.text, fontWeight: strong ? 700 : 400, fontFamily: FONTS.mono }}>{val}</span>
     </div>
   );
   const z = (n) => `${(n || 0).toLocaleString()}ᶻ`;
@@ -227,7 +227,7 @@ function GovernancePanel({ base, planet, onChange }) {
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <Coins size={16} color={COLORS.gold} />
-        <span style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 800, fontSize: 14 }}>Governance</span>
+        <span style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 14 }}>Governance</span>
         <div style={{ flex: 1 }} />
         <Tag color={govTierColor(gc.stabilityIdx)}>Stability: {UNI_STABILITY[gc.stabilityIdx]}</Tag>
         <Tag color={govTierColor(gc.reputationIdx)}>Reputation: {UNI_REPUTATION[gc.reputationIdx]}</Tag>
@@ -325,7 +325,7 @@ function BaseTab() {
         <Crown size={22} color={COLORS.gold} />
         <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <div style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>Player Faction</div>
-          <TextInput value={base.factionName} onChange={e => save({ factionName: e.target.value })} placeholder="Name your faction (e.g. The Crimson Fist)" style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 700 }} />
+          <TextInput value={base.factionName} onChange={e => save({ factionName: e.target.value })} placeholder="Name your faction (e.g. The Crimson Fist)" style={{ fontFamily: FONTS.display, fontWeight: 700 }} />
         </div>
         <div style={{ fontSize: 11.5, color: COLORS.dim, maxWidth: 280 }}>Your player-driven faction. Claim territory and manage Influence over in the <b style={{ color: COLORS.gold }}>Universe</b> map.</div>
       </div>

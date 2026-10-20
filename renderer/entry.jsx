@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import "./fonts.css";
 import "./storage.js";
 import SplashGate from "./SplashGate.jsx";
 import ConnectGate from "./ConnectGate.jsx";

@@ -5,7 +5,7 @@ import { computeCarryWeight, computePowerLevel, powerDR } from "../../engine/der
 import { computeArmorDR, computeWeighted, weightedPower } from "../../engine/equipment.js";
 import { useHouseRules } from "../../state/hooks.js";
 import { CommaNumInput, Gauge, TextInput } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { statStepBtn } from "../session/combat-parts.jsx";
 import { SkillsSavesTab } from "./builder-tabs.jsx";
 import { TagListEditor } from "./items.jsx";
@@ -16,7 +16,7 @@ import { AttacksPerTurnBadge, ComputedACField } from "./vitals-gear.jsx";
 const STAT_CARD = { background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "11px 13px", minHeight: 98, display: "flex", flexDirection: "column" };
 const STAT_LABEL = { fontSize: 10, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.7, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 };
 const STAT_LINK = { cursor: "pointer", color: COLORS.blue, fontSize: 9.5, fontWeight: 600, letterSpacing: 0, textTransform: "none" };
-const STAT_VALUE = { fontFamily: "Orbitron, sans-serif", fontWeight: 900, lineHeight: 1 };
+const STAT_VALUE = { fontFamily: FONTS.display, fontWeight: 900, lineHeight: 1 };
 const STAT_SUB = { fontSize: 9.5, color: COLORS.dim, marginTop: "auto", paddingTop: 8 };
 const STAT_MINI = { textAlign: "center", padding: "4px 4px", fontSize: 12 };
 const STAT_MINI_LABEL = { fontSize: 8.5, color: COLORS.dim, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 };
@@ -88,7 +88,7 @@ function SpeedPanel({ char, set }) {
         <span>Speed{wt.net !== 0 && <span style={{ color: wt.net > 0 ? COLORS.green : COLORS.red, fontSize: 9, letterSpacing: 0 }}> ({wt.net > 0 ? "+" : ""}{wt.net * 10}ft wt)</span>}</span>
         <span onClick={() => setEditing(e => !e)} style={STAT_LINK}>{editing ? "done" : "edit"}</span>
       </div>
-      <div style={{ ...STAT_VALUE, fontSize: 27, color: COLORS.gold }}>{final}<span style={{ fontSize: 12, color: COLORS.dim, fontFamily: "Inter, sans-serif", fontWeight: 600 }}> ft</span></div>
+      <div style={{ ...STAT_VALUE, fontSize: 27, color: COLORS.gold }}>{final}<span style={{ fontSize: 12, color: COLORS.dim, fontFamily: FONTS.body, fontWeight: 600 }}> ft</span></div>
       {editing ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8 }}>
           <div><div style={STAT_MINI_LABEL}>Base</div><TextInput type="number" value={char.speedBase ?? 30} onChange={e => set({ speedBase: +e.target.value || 0 })} style={STAT_MINI} /></div>
@@ -209,10 +209,10 @@ function StatsTab({ char, set }) {
           return (
             <div key={k} title={moved ? from : undefined} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: COLORS.panel2, border: `1px solid ${moved ? COLORS.gold + "77" : COLORS.border}`, borderRadius: 10, padding: "10px 6px 8px" }}>
               <div style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>{k}</div>
-              <div style={{ fontFamily: "Orbitron, sans-serif", fontSize: 22, fontWeight: 900, lineHeight: 1, color: accent }}>{mod >= 0 ? "+" : ""}{mod}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 2, background: "#0D0F16", border: `1px solid ${COLORS.border}`, borderRadius: 20, padding: "1px 3px" }}>
+              <div style={{ fontFamily: FONTS.display, fontSize: 22, fontWeight: 900, lineHeight: 1, color: accent }}>{mod >= 0 ? "+" : ""}{mod}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 2, background: COLORS.input, border: `1px solid ${COLORS.border}`, borderRadius: 20, padding: "1px 3px" }}>
                 <button onClick={() => setStat(k, Math.max(1, (v || 0) - 1))} title="−1" style={{ ...statStepBtn }}><Minus size={11} /></button>
-                <input type="number" value={v} onFocus={e => e.target.select()} onChange={e => setStat(k, +e.target.value)} style={{ width: 30, textAlign: "center", border: "none", background: "transparent", color: COLORS.text, fontSize: 13, fontWeight: 700, fontFamily: "Inter, sans-serif", outline: "none", MozAppearance: "textfield" }} />
+                <input type="number" value={v} onFocus={e => e.target.select()} onChange={e => setStat(k, +e.target.value)} style={{ width: 30, textAlign: "center", border: "none", background: "transparent", color: COLORS.text, fontSize: 13, fontWeight: 700, fontFamily: FONTS.body, outline: "none", MozAppearance: "textfield" }} />
                 <button onClick={() => setStat(k, (v || 0) + 1)} title="+1" style={{ ...statStepBtn }}><Plus size={11} /></button>
                 {moved && <span title="Effective (with gear)" style={{ fontSize: 11, fontWeight: 800, color: COLORS.gold }}>→{eff}</span>}
               </div>

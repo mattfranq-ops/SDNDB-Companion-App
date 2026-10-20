@@ -5,7 +5,7 @@ import { NPC_POOLS } from "../../data/name-pools.js";
 import { pick, roll, uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, EmptyState, ErrorBanner, Field, LoadingBlock, ScannerHeader, Tag, TextInput, downloadJSON } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { scaledNpc } from "../npcs/antagonist.jsx";
 
 /* ============================== TABLES ============================== */
@@ -30,7 +30,7 @@ function BookTableCard({ table }) {
       </div>
       {result && (
         <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.gold}55`, borderRadius: 8, padding: 10, marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace", marginBottom: 4 }}>Rolled {result.n}</div>
+          <div style={{ fontSize: 11, color: COLORS.gold, fontFamily: FONTS.mono, marginBottom: 4 }}>Rolled {result.n}</div>
           <div style={{ fontSize: 13 }}>{result.row?.result || "No matching row."}</div>
         </div>
       )}
@@ -38,7 +38,7 @@ function BookTableCard({ table }) {
         <div style={{ marginTop: 8 }}>
           {table.rows.map((r,i) => (
             <div key={i} style={{ display: "flex", gap: 10, fontSize: 12, padding: "5px 0", borderBottom: i<table.rows.length-1?`1px solid ${COLORS.border}`:"none" }}>
-              <div style={{ width: 44, flexShrink: 0, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace" }}>{r.range}</div>
+              <div style={{ width: 44, flexShrink: 0, color: COLORS.gold, fontFamily: FONTS.mono }}>{r.range}</div>
               <div style={{ color: COLORS.muted }}>{r.result}</div>
             </div>
           ))}
@@ -100,7 +100,7 @@ function CustomTablesTab() {
     return (
       <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-          <TextInput value={open.name} onChange={e => update(open.id, { name: e.target.value })} style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 700, fontSize: 16, background: "transparent", border: "none", maxWidth: 260 }} />
+          <TextInput value={open.name} onChange={e => update(open.id, { name: e.target.value })} style={{ fontFamily: FONTS.display, fontWeight: 700, fontSize: 16, background: "transparent", border: "none", maxWidth: 260 }} />
           <div style={{ display: "flex", gap: 8 }}>
             <Btn size="sm" variant="blue" onClick={() => downloadJSON(open, `${open.name.replace(/\s+/g,'_')}.json`)}><Download size={13}/></Btn>
             <Btn size="sm" variant="danger" onClick={() => remove(open.id)}><Trash2 size={13}/></Btn>
@@ -297,11 +297,11 @@ function BountyHuntingTab() {
 }
 
 
-function TablesScreen() {
+function TablesScreen({ onBack }) {
   const [sub, setSub] = useState("book");
   return (
     <div>
-      <ScannerHeader title="TABLES" subtitle="Book tables, downtime & training, gambling, bounties, and your own custom rolls." />
+      <ScannerHeader title="TABLES" subtitle="Book tables, downtime & training, gambling, bounties, and your own custom rolls." onBack={onBack} />
       <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: `1px solid ${COLORS.border}`, flexWrap: "wrap" }}>
         {[["book","Book Tables"],["downtime","Downtime & Training"],["gambling","Gambling"],["bounty","Bounty Hunting"],["gm","GM Toolkit"],["custom","Custom"]].map(([k,l]) => (
           <button key={k} onClick={() => setSub(k)} style={{ padding: "8px 14px", background: "transparent", border: "none", borderBottom: `2px solid ${sub===k?COLORS.gold:"transparent"}`, color: sub===k?COLORS.gold:COLORS.muted, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{l}</button>

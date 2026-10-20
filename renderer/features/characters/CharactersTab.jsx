@@ -10,7 +10,7 @@ import { isCaster } from "../../engine/spellcasting.js";
 import { roll, uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, ConfirmBtn, EmptyState, ErrorBanner, Field, Gauge, LoadingBlock, ModeCard, ScannerHeader, Select, Tag, TextInput, downloadJSON } from "../../ui/atoms.jsx";
-import { COLORS } from "../../ui/theme.js";
+import { COLORS, FONTS } from "../../ui/theme.js";
 import { BioTab, ClassesTab, FeatsPickerTab, FeaturesTab, SpeciesPicker, TrainingTab } from "./builder-tabs.jsx";
 import { CombatRefTab } from "./combat-tab.jsx";
 import { BenefitsOfPowerCard, ConditionsPanel, FormsPlayTab, FormsTab, PowerOverloadCard } from "./forms.jsx";
@@ -70,7 +70,7 @@ function CharacterEditorSimple({ char, onChange, onDelete, onClose }) {
   return (
     <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
-        <TextInput value={local.name} onChange={e => set({ name: e.target.value })} style={{ fontFamily: "Orbitron, sans-serif", fontSize: 18, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300 }} />
+        <TextInput value={local.name} onChange={e => set({ name: e.target.value })} style={{ fontFamily: FONTS.display, fontSize: 18, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300 }} />
         <Btn size="sm" variant="ghost" onClick={onClose}><X size={15}/></Btn>
       </div>
 
@@ -323,7 +323,7 @@ function QuickCreate({ randomStats, onCreate, onCancel }) {
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
         {pool.map((v, i) => (
-          <span key={i} style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700, fontSize: 12.5, padding: "3px 9px", borderRadius: 6, background: usedIdx.includes(i) ? COLORS.panel2 : `${COLORS.gold}18`, color: usedIdx.includes(i) ? COLORS.dim : COLORS.gold, border: `1px solid ${usedIdx.includes(i) ? COLORS.border : COLORS.gold + "66"}`, textDecoration: usedIdx.includes(i) ? "line-through" : "none" }}>{v}</span>
+          <span key={i} style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 12.5, padding: "3px 9px", borderRadius: 6, background: usedIdx.includes(i) ? COLORS.panel2 : `${COLORS.gold}18`, color: usedIdx.includes(i) ? COLORS.dim : COLORS.gold, border: `1px solid ${usedIdx.includes(i) ? COLORS.border : COLORS.gold + "66"}`, textDecoration: usedIdx.includes(i) ? "line-through" : "none" }}>{v}</span>
         ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
@@ -335,7 +335,7 @@ function QuickCreate({ randomStats, onCreate, onCancel }) {
             <div key={ab} style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "6px 8px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
                 <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", color: COLORS.muted }}>{ab}</span>
-                {mod != null && <span style={{ fontSize: 10.5, color: COLORS.gold, fontFamily: "JetBrains Mono, monospace" }}>{mod >= 0 ? "+" : ""}{mod}</span>}
+                {mod != null && <span style={{ fontSize: 10.5, color: COLORS.gold, fontFamily: FONTS.mono }}>{mod >= 0 ? "+" : ""}{mod}</span>}
               </div>
               <Select value={assign[ab] == null ? "" : assign[ab]} onChange={e => setAbility(ab, e.target.value)} style={{ padding: "5px 6px" }}>
                 <option value="">—</option>
@@ -346,7 +346,7 @@ function QuickCreate({ randomStats, onCreate, onCancel }) {
         })}
       </div>
 
-      <div style={{ fontSize: 11, color: COLORS.dim, marginBottom: 12, fontFamily: "JetBrains Mono, monospace" }}>
+      <div style={{ fontSize: 11, color: COLORS.dim, marginBottom: 12, fontFamily: FONTS.mono }}>
         {die} hit die · HP {maxHp} · Stamina {maxStamina} · Ki {maxKi}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
