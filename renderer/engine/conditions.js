@@ -87,6 +87,16 @@ function exhaustionRanks(char) {
 }
 const exhaustionPenalty = (char) => -2 * exhaustionRanks(char);
 
+// Saved roll modifiers (a blessing, a scouter, a grudge): switched on or off on
+// the Combat tab and added to every matching roll. appliesTo is "all",
+// "attack", "damage", "check" or "save"; spell attacks count as attacks.
+const ROLL_MOD_TARGETS = [["all", "All d20 rolls"], ["attack", "Attacks"], ["damage", "Damage"], ["check", "Checks"], ["save", "Saves"]];
+function rollModBonus(char, kind) {
+  const on = ((char && char.rollMods) || []).filter(m => m.on && (Number(m.value) || 0) !== 0
+    && (m.appliesTo === kind || (m.appliesTo === "all" && kind !== "damage")));
+  return { total: on.reduce((s, m) => s + (Number(m.value) || 0), 0), names: on.map(m => m.name || "Modifier") };
+}
+
 // Ki Exhaustion (p.25): no Ki left, Temporary Ki included.
 const inKiExhaustion = (char) => !!char && (char.maxKi || 0) > 0 && (char.ki || 0) + ((char.temp && char.temp.ki) || 0) <= 0;
 
@@ -98,5 +108,7 @@ export {
   kiFluxResult,
   exhaustionRanks,
   exhaustionPenalty,
+  ROLL_MOD_TARGETS,
+  rollModBonus,
   inKiExhaustion,
 };

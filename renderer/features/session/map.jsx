@@ -1,15 +1,18 @@
 import React, { useState, useRef } from "react";
-import { ChevronLeft, ChevronRight, Minus, Plus, Upload, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, MapPin, Minus, Plus, Trash2, Upload, X } from "lucide-react";
 import { useLocalOption } from "../../state/local-options.js";
 import { activeForms } from "../../engine/core.js";
 import { useSharedList } from "../../state/hooks.js";
-import { Btn, LoadingBlock, Select, Tag, TextInput } from "../../ui/atoms.jsx";
+import { Btn, LoadingBlock, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
+import { uid } from "../../lib/dice.js";
 import { COLORS, FONTS } from "../../ui/theme.js";
 import { miniBtnStyle } from "./combat-parts.jsx";
 
 // Tactical battle map. Tokens come from the initiative tracker; drag to move on
 // the X/Y plane, and each carries an altitude for flight. Positions live on the
-// combatant so the whole table sees the same board.
+// combatant so the whole table sees the same board. Pins mark places on the
+// map (a door, a Dragon Ball, the hidden lab) with a note; the DM can hide a
+// pin from players until they find it.
 const MAP_COLS = 22, MAP_ROWS = 14, MAP_CELL = 30;
 
 // Load an image file and downscale it so its longest side is <= maxDim, returning
@@ -43,6 +46,12 @@ function MapTab() {
   const [mapState, persistMap] = useSharedList("session_map");   // backdrop, kept apart from tokens so drags don't rewrite it
   const [selId, setSelId] = useState(null);
   const [dragPos, setDragPos] = useState(null);   // {id, x, y} live drag position
+  const [pinMode, setPinMode] = useState(false);  // next click on the board drops a pin
+  const [selPinId, setSelPinId] = useState(null);
+  const [dragPin, setDragPin] = useState(null);   // {id, x, y}
+  const [sessionView] = useLocalOption("sdndbz_session_view_v1", { mode: "player" });
+  const isDM = sessionView.mode === "dm";
+  const [pinState, persistPins] = useSharedList("session_pins");   // its own doc, so typing a note doesn't resend the backdrop
   const svgRef = useRef(null);
   const fileRef = useRef(null);
   if (state === null) return <LoadingBlock />;
@@ -56,6 +65,10 @@ function MapTab() {
     if (!f) return;
     fileToScaledDataURL(f, 2000, (url) => { if (url) persistMap([{ ...map, img: url, opacity: bgOpacity, fit: bgFit }]); });
   };
+  const pins = pinState || [];
+  const visiblePins = pins.filter(p => isDM || !p.hidden);
+  const savePins = (next) => persistPins(next);
+  const updPin = (id, patch) => savePins(pins.map(p => p.id === id ? { ...p, ...patch } : p));
   const data = (state && state[0]) || { round: 1, turn: 0, combatants: [] };
   const combatants = data.combatants || [];
   // A token reflects the linked fighter's active form: its aura colors the token,
@@ -74,9 +87,24 @@ function MapTab() {
   const posOf = (c, i) => (dragPos && dragPos.id === c.id) ? { x: dragPos.x, y: dragPos.y }
     : { x: c.mapX != null ? c.mapX : (1 + (i % (MAP_COLS - 2))), y: c.mapY != null ? c.mapY : (1 + Math.floor(i / (MAP_COLS - 2))) };
   const cellFromEvent = (e) => { const r = svgRef.current.getBoundingClientRect(); return { x: Math.max(0, Math.min(MAP_COLS - 1, Math.floor((e.clientX - r.left) / MAP_CELL))), y: Math.max(0, Math.min(MAP_ROWS - 1, Math.floor((e.clientY - r.top) / MAP_CELL))) }; };
-  const onMove = (e) => { if (dragPos) { const p = cellFromEvent(e); setDragPos({ id: dragPos.id, ...p }); } };
-  const onUp = () => { if (dragPos) { setPos(dragPos.id, dragPos.x, dragPos.y); setDragPos(null); } };
+  const onMove = (e) => {
+    if (dragPos) { const p = cellFromEvent(e); setDragPos({ id: dragPos.id, ...p }); }
+    if (dragPin) { const p = cellFromEvent(e); setDragPin({ id: dragPin.id, ...p }); }
+  };
+  const onUp = () => {
+    if (dragPos) { setPos(dragPos.id, dragPos.x, dragPos.y); setDragPos(null); }
+    if (dragPin) { updPin(dragPin.id, { x: dragPin.x, y: dragPin.y }); setDragPin(null); }
+  };
+  const onBoardClick = (e) => {
+    if (!pinMode) return;
+    const p = cellFromEvent(e);
+    const pin = { id: uid(), x: p.x, y: p.y, label: `Pin ${pins.length + 1}`, note: "", hidden: false };
+    savePins([...pins, pin]);
+    setPinMode(false); setSelPinId(pin.id); setSelId(null);
+  };
+  const pinPos = (p) => (dragPin && dragPin.id === p.id) ? dragPin : p;
   const sel = combatants.find(c => c.id === selId);
+  const selPin = visiblePins.find(p => p.id === selPinId);
   const W = MAP_COLS * MAP_CELL, H = MAP_ROWS * MAP_CELL;
   const tokColor = (c) => c.sourceType === "player" ? COLORS.blue : c.sourceType === "npc" ? COLORS.red : COLORS.muted;
   return (
@@ -95,20 +123,34 @@ function MapTab() {
           <input type="range" min="20" max="100" value={Math.round(bgOpacity * 100)} onChange={e => persistMap([{ ...map, opacity: (+e.target.value) / 100 }])} style={{ width: 90 }} />
           <Btn size="sm" variant="ghost" onClick={() => persistMap([{ ...map, img: null }])}><X size={13} /> Remove</Btn>
         </>)}
+        <Btn size="sm" variant={pinMode ? "gold" : "default"} onClick={() => setPinMode(m => !m)} title="Click the board to drop a pin"><MapPin size={13} /> {pinMode ? "Click the board…" : "Add pin"}</Btn>
         <span style={{ fontSize: 11, color: COLORS.dim }}>Export your map from World Anvil, then import the image here.</span>
       </div>
       <div style={{ overflowX: "auto", border: `1px solid ${COLORS.border}`, borderRadius: 10, background: COLORS.panel2, marginBottom: 12 }}>
-        <svg ref={svgRef} width={W} height={H} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} style={{ display: "block", userSelect: "none" }}>
+        <svg ref={svgRef} width={W} height={H} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} onClick={onBoardClick} style={{ display: "block", userSelect: "none", cursor: pinMode ? "crosshair" : "default" }}>
           {bg && <image href={bg} x={0} y={0} width={W} height={H} preserveAspectRatio={bgFit === "stretch" ? "none" : bgFit === "cover" ? "xMidYMid slice" : "xMidYMid meet"} opacity={bgOpacity} style={{ pointerEvents: "none" }} />}
           {Array.from({ length: MAP_COLS + 1 }).map((_, i) => <line key={"v" + i} x1={i * MAP_CELL} y1={0} x2={i * MAP_CELL} y2={H} stroke={COLORS.border} strokeWidth={0.5} strokeOpacity={bg ? 0.35 : 1} />)}
           {Array.from({ length: MAP_ROWS + 1 }).map((_, i) => <line key={"h" + i} x1={0} y1={i * MAP_CELL} x2={W} y2={i * MAP_CELL} stroke={COLORS.border} strokeWidth={0.5} strokeOpacity={bg ? 0.35 : 1} />)}
+          {visiblePins.map(pin => {
+            const p = pinPos(pin); const cx = p.x * MAP_CELL + MAP_CELL / 2, cy = p.y * MAP_CELL + MAP_CELL / 2;
+            const on = pin.id === selPinId;
+            const color = pin.hidden ? COLORS.dim : COLORS.gold;
+            return (
+              <g key={pin.id} onMouseDown={(e) => { if (pinMode) return; e.preventDefault(); e.stopPropagation(); setSelPinId(pin.id); setSelId(null); setDragPin({ id: pin.id, x: p.x, y: p.y }); }} style={{ cursor: "grab" }}>
+                <title>{pin.label}{pin.note ? ` — ${pin.note}` : ""}</title>
+                <path d={`M ${cx} ${cy + 9} L ${cx - 7} ${cy - 2} A 8 8 0 1 1 ${cx + 7} ${cy - 2} Z`} fill={color} stroke={on ? COLORS.text : COLORS.deep} strokeWidth={on ? 2 : 1.2} strokeDasharray={pin.hidden ? "2 2" : undefined} />
+                <circle cx={cx} cy={cy - 5} r={2.6} fill={COLORS.deep} />
+                <text x={cx} y={cy + 20} textAnchor="middle" fontSize={9.5} fontWeight="700" fill={color} style={{ paintOrder: "stroke", stroke: COLORS.deep, strokeWidth: 3 }}>{pin.label}</text>
+              </g>
+            );
+          })}
           {combatants.map((c, i) => {
             const p = posOf(c, i); const cx = p.x * MAP_CELL + MAP_CELL / 2, cy = p.y * MAP_CELL + MAP_CELL / 2;
             const { form, giga, color } = tokenInfo(c); const alt = c.alt || 0; const on = c.id === selId;
             const r = Math.min((MAP_CELL / 2 - 5) + giga * MAP_CELL * 0.5, MAP_CELL * 2.2);
             const fs = Math.min(10 + giga * 2, 20);
             return (
-              <g key={c.id} onMouseDown={(e) => { e.preventDefault(); setSelId(c.id); setDragPos({ id: c.id, x: p.x, y: p.y }); }} style={{ cursor: "grab" }}>
+              <g key={c.id} onMouseDown={(e) => { if (pinMode) return; e.preventDefault(); setSelId(c.id); setSelPinId(null); setDragPos({ id: c.id, x: p.x, y: p.y }); }} style={{ cursor: "grab" }}>
                 {alt > 0 && <circle cx={cx} cy={cy} r={r + 3} fill="none" stroke={color} strokeWidth={1} strokeDasharray="2 2" opacity={0.6} />}
                 <circle cx={cx} cy={cy} r={r} fill={color} stroke={on ? COLORS.gold : COLORS.deep} strokeWidth={on ? 2.5 : 1.5} />
                 <text x={cx} y={cy + fs / 3} textAnchor="middle" fontSize={fs} fontWeight="700" fill={COLORS.deep}>{(c.name || "?").slice(0, 2)}</text>
@@ -119,6 +161,18 @@ function MapTab() {
           })}
         </svg>
       </div>
+      {selPin && !sel && (
+        <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.gold}55`, borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <MapPin size={15} color={COLORS.gold} />
+            <TextInput value={selPin.label} onChange={e => updPin(selPin.id, { label: e.target.value })} placeholder="Pin name" style={{ flex: 1, minWidth: 160 }} />
+            {isDM && <Btn size="sm" onClick={() => updPin(selPin.id, { hidden: !selPin.hidden })} title={selPin.hidden ? "Hidden from players. Click to reveal" : "Players can see this pin. Click to hide"}>{selPin.hidden ? <><EyeOff size={13} /> Hidden</> : <><Eye size={13} /> Shown</>}</Btn>}
+            <Btn size="sm" variant="ghost" onClick={() => { savePins(pins.filter(p => p.id !== selPin.id)); setSelPinId(null); }} aria-label="Remove pin"><Trash2 size={13} /></Btn>
+            <Btn size="sm" variant="ghost" onClick={() => setSelPinId(null)}>Done</Btn>
+          </div>
+          <TextArea value={selPin.note || ""} onChange={e => updPin(selPin.id, { note: e.target.value })} placeholder="What's here? (shown on hover)" rows={2} />
+        </div>
+      )}
       {sel ? (
         <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14, display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ fontWeight: 700 }}>{sel.name}</span>
@@ -136,7 +190,7 @@ function MapTab() {
           <Btn size="sm" variant="ghost" onClick={() => setSelId(null)}>Deselect</Btn>
         </div>
       ) : (
-        <div style={{ fontSize: 12, color: COLORS.dim }}>{combatants.length ? "Drag a token to move it on the ground. Click a token to set its altitude for flight." : "Add fighters in the Initiative tab and they appear here as tokens."}</div>
+        <div style={{ fontSize: 12, color: COLORS.dim }}>{combatants.length ? "Drag a token to move it on the ground. Click a token to set its altitude for flight. Pins drag the same way." : "Add fighters in the Initiative tab and they appear here as tokens."}</div>
       )}
     </div>
   );

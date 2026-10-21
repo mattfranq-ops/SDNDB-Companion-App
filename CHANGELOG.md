@@ -63,6 +63,20 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   Elite Critical Technique is no longer a limited pool in 5.0, so it's gone.
 - Superiority Dice regain Ki Rank dice at the start of the turn, not the whole pool.
 
+**Table tools** (the last gaps found against the Cyberpunk RED Companion)
+- **Roll Encounter** in the Session tracker rolls a fight from the Roster of FighterZ sized to
+  the party (players, average level, Easy to Deadly, any saga). Hard and Deadly fights get an
+  Elite or Iconic leader with Generals from the same crew. Reroll until it fits, then one click
+  saves the NPCs and puts them in initiative. The book has no encounter budget, so the app's
+  guide is: each player is one General of the party's tier, an Elite counts two, an Iconic four.
+- **Saved modifiers** on the Combat tab: keep Bless +2, a high-ground bonus or a curse on the
+  sheet, switch them on when they apply, and they're added to attacks, damage, checks, saves or
+  spell attacks automatically.
+- **Store cart:** add several items (or several of one) to a cart in the Store or Night Market
+  and buy them all at once, with one Zeni deduction and a running "keeps / short by" total.
+- **Map pins:** drop named pins on the battle map with a note shown on hover, drag them around,
+  and (in DM view) hide a pin from players until they find it.
+
 **Sheet and table**
 - Bio → **Story**: backstory, a goals checklist, and the people in a character's life (allies,
   contacts, mentors, family, rivals, enemies) with notes.

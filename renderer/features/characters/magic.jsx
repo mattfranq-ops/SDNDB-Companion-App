@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { BookOpen, Check, Dices, Minus, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 import { emitRoll } from "../../app/bus.js";
 import { SPELL_DATA } from "../../data/spell-data.js";
-import { exhaustionPenalty } from "../../engine/conditions.js";
+import { exhaustionPenalty, rollModBonus } from "../../engine/conditions.js";
 import { STAT_MOD_LABEL } from "../../engine/core.js";
 import { STAT_KEYS } from "../../engine/skills.js";
 import { SPELL_SCHOOLS, defaultCasterAbility, fullCasterSlots, mysticLevel, spellStats } from "../../engine/spellcasting.js";
@@ -198,7 +198,8 @@ function MagicTab({ char, set }) {
   const castRoll = (name, note) => {
     const d20 = roll(20);
     const exh = exhaustionPenalty(char);
-    emitRoll({ label: `${char.name || "Caster"} casts ${name}`, total: d20 + attack + exh, detail: `Atk d20 ${d20} ${attack >= 0 ? "+" : ""}${attack}${exh ? ` ${exh} Exhaustion` : ""} · Save DC ${saveDC}${note ? ` · ${note}` : ""}`, color: COLORS.purple, share: true, who: char.name || "" });
+    const mods = rollModBonus(char, "attack").total;
+    emitRoll({ label: `${char.name || "Caster"} casts ${name}`, total: d20 + attack + exh + mods, detail: `Atk d20 ${d20} ${attack >= 0 ? "+" : ""}${attack}${mods ? ` ${mods >= 0 ? "+" : ""}${mods} mods` : ""}${exh ? ` ${exh} Exhaustion` : ""} · Save DC ${saveDC}${note ? ` · ${note}` : ""}`, color: COLORS.purple, share: true, who: char.name || "" });
   };
   const castSpell = (s) => {
     const slot = slots.filter(sl => sl.level >= s.level && sl.current > 0).sort((a, b) => a.level - b.level)[0];

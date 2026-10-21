@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Coins, MapPin, Orbit, Rocket, RotateCcw } from "lucide-react";
+import { Coins, MapPin, Minus, Orbit, Plus, Rocket, RotateCcw, ShoppingCart, X } from "lucide-react";
 import { useLocalOption } from "../../state/local-options.js";
 import { RARITY_TIERS, rarityInfo } from "../../data/book-tables.js";
 import { HIGH_TECH_PARTS } from "../../data/hightech-data.js";
@@ -53,6 +53,15 @@ const storeStock = (planet, catalog) => catalog.filter(it => it.kind === "highte
 function purchaseItemFromCatalog(it) {
   if (it.kind === "equipment") { const { kind, storeGroup, ...gear } = it; return { ...gear, id: uid(), qty: 1 }; }
   return { id: uid(), name: it.name, rarity: it.rarity || "uncommon", zeni: it.zeni, qty: 1, notes: "High-Tech Part — install via Inventory → Cybernetics." };
+}
+// Buying a cart: one Ƶeni deduction for the lot, one inventory entry per unit
+// (each can be equipped or installed on its own). Null when it can't be paid.
+const cartTotal = (cart) => cart.reduce((s, l) => s + l.price * l.qty, 0);
+function checkoutPatch(char, cart) {
+  const total = cartTotal(cart);
+  if (!char || !cart.length || (char.zeni || 0) < total) return null;
+  const bought = cart.flatMap(l => Array.from({ length: l.qty }, () => purchaseItemFromCatalog(l.item)));
+  return { zeni: (char.zeni || 0) - total, items: [...(char.items || []), ...bought] };
 }
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < (s || "").length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -114,7 +123,7 @@ function MarketHeader({ galaxy, current, chars, shopperId, setShopperId, onSetLo
   );
 }
 
-function StoreItemCard({ item, price, base, canBuy, reason, onBuy }) {
+function StoreItemCard({ item, price, base, canBuy, reason, onBuy, onAdd, inCart = 0 }) {
   const rc = rarityInfo(item.rarity).color;
   const discounted = base != null && price < base;
   return (
@@ -132,18 +141,59 @@ function StoreItemCard({ item, price, base, canBuy, reason, onBuy }) {
           <span style={{ fontFamily: FONTS.mono, fontWeight: 700, color: COLORS.gold }}>Ƶ {price.toLocaleString()}</span>
           {discounted && <span style={{ fontSize: 10, color: COLORS.dim, textDecoration: "line-through" }}>Ƶ {base.toLocaleString()}</span>}
         </span>
-        <Btn size="sm" variant="gold" disabled={!canBuy} title={canBuy ? "Buy" : reason} onClick={onBuy} style={!canBuy ? { opacity: 0.5, cursor: "not-allowed" } : {}}>Buy</Btn>
+        <span style={{ display: "flex", gap: 6 }}>
+          {onAdd && <Btn size="sm" onClick={onAdd} title="Add to cart"><ShoppingCart size={12}/>{inCart ? ` ${inCart}` : ""}</Btn>}
+          <Btn size="sm" variant="gold" disabled={!canBuy} title={canBuy ? "Buy" : reason} onClick={onBuy} style={!canBuy ? { opacity: 0.5, cursor: "not-allowed" } : {}}>Buy</Btn>
+        </span>
       </div>
     </div>
   );
 }
 
-function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, onBuy, isDM }) {
+const cartKey = (it, price) => `${it.catalogId || it.name}@${price}`;
+function CartBar({ cart, setCart, shopper, onCheckout }) {
+  if (!cart.length) return null;
+  const total = cartTotal(cart);
+  const short = shopper && (shopper.zeni || 0) < total;
+  const setQty = (key, qty) => setCart(cart.flatMap(l => l.key !== key ? [l] : qty > 0 ? [{ ...l, qty }] : []));
+  return (
+    <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.gold}55`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <ShoppingCart size={15} color={COLORS.gold} />
+        <span style={{ fontWeight: 700, fontSize: 13 }}>Cart</span>
+        <div style={{ flex: 1 }} />
+        <Btn size="sm" variant="ghost" onClick={() => setCart([])}><X size={12}/> Empty</Btn>
+      </div>
+      {cart.map(l => (
+        <div key={l.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, marginBottom: 4 }}>
+          <span style={{ flex: 1, fontWeight: 600 }}>{l.item.name}</span>
+          <Btn size="sm" onClick={() => setQty(l.key, l.qty - 1)} aria-label={`One fewer ${l.item.name}`}><Minus size={11}/></Btn>
+          <span style={{ fontFamily: FONTS.mono, minWidth: 22, textAlign: "center" }}>{l.qty}</span>
+          <Btn size="sm" onClick={() => setQty(l.key, l.qty + 1)} aria-label={`One more ${l.item.name}`}><Plus size={11}/></Btn>
+          <span style={{ fontFamily: FONTS.mono, color: COLORS.gold, minWidth: 80, textAlign: "right" }}>Ƶ {(l.price * l.qty).toLocaleString()}</span>
+        </div>
+      ))}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${COLORS.border}` }}>
+        <span style={{ fontSize: 12, color: short ? COLORS.red : COLORS.muted }}>{!shopper ? "Pick who's shopping" : short ? `${shopper.name} is Ƶ ${(total - (shopper.zeni || 0)).toLocaleString()} short` : `${shopper.name} keeps Ƶ ${((shopper.zeni || 0) - total).toLocaleString()}`}</span>
+        <div style={{ flex: 1 }} />
+        <Btn variant="gold" disabled={!shopper || short} onClick={onCheckout}>Buy all · Ƶ {total.toLocaleString()}</Btn>
+      </div>
+    </div>
+  );
+}
+
+function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, onBuy, cart, setCart, onCheckout, isDM }) {
   const [custom] = useSharedList("custom_hightech_v1");
   if (!galaxy) return <EmptyState icon={Coins} title="No galaxy charted yet" body="Forge a galaxy first — the Store prices gear by the planet you're standing on." />;
   const catalog = buildStoreCatalog(custom || []);
   const shopper = chars.find(c => c.id === shopperId) || null;
   const header = <MarketHeader galaxy={galaxy} current={current} chars={chars} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={onSetLocation} isDM={isDM} />;
+  const inCart = (it, price) => (cart.find(l => l.key === cartKey(it, price)) || {}).qty || 0;
+  const addToCart = (it, price) => {
+    const key = cartKey(it, price);
+    setCart(cart.some(l => l.key === key) ? cart.map(l => l.key === key ? { ...l, qty: l.qty + 1 } : l) : [...cart, { key, item: it, price, qty: 1 }]);
+  };
+  const cartBar = <CartBar cart={cart} setCart={setCart} shopper={shopper} onCheckout={onCheckout} />;
   const planet = current?.planet;
   if (!planet) return <div>{header}<EmptyState icon={MapPin} title="Pick a location" body="Choose the world the party is on — the Store stocks and prices gear to its economy and local tax." /></div>;
   if (!planetOpen(planet)) return <div>{header}<EmptyState icon={Coins} title="No market here" body={`${planet.name} is uninhabited — no vendors. Set a populated world as your location.`} /></div>;
@@ -152,6 +202,7 @@ function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLoc
   return (
     <div>
       {header}
+      {cartBar}
       {groups.map(g => {
         const items = stock.filter(i => i.storeGroup === g);
         if (!items.length) return null;
@@ -162,23 +213,29 @@ function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLoc
               {items.map(it => {
                 const price = storePrice(it.zeni, planet, it.kind);
                 const canBuy = !!shopper && (shopper.zeni || 0) >= price;
-                return <StoreItemCard key={it.catalogId || it.name} item={it} price={price} base={price !== it.zeni ? it.zeni : null} canBuy={canBuy} reason={!shopper ? "Pick who's shopping" : "Not enough Ƶeni"} onBuy={() => onBuy(it, price)} />;
+                return <StoreItemCard key={it.catalogId || it.name} item={it} price={price} base={price !== it.zeni ? it.zeni : null} canBuy={canBuy} reason={!shopper ? "Pick who's shopping" : "Not enough Ƶeni"} onBuy={() => onBuy(it, price)} onAdd={() => addToCart(it, price)} inCart={inCart(it, price)} />;
               })}
             </div>
           </div>
         );
       })}
-      <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 4 }}>Wealth caps rarity on the shelf; tech level and economy decide what's stocked. Buying deducts Ƶeni and drops the item into {shopper ? shopper.name + "'s" : "the buyer's"} inventory.</div>
+      <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 4 }}>Wealth caps rarity on the shelf; tech level and economy decide what's stocked. Buying (one item, or the whole cart) deducts Ƶeni and drops it into {shopper ? shopper.name + "'s" : "the buyer's"} inventory.</div>
     </div>
   );
 }
 
-function NightMarketScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, onBuy, onRefresh, isDM }) {
+function NightMarketScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, onBuy, onRefresh, cart, setCart, onCheckout, isDM }) {
   const [custom] = useSharedList("custom_hightech_v1");
   if (!galaxy) return <EmptyState icon={Rocket} title="No galaxy charted yet" body="Forge a galaxy first — the Night Market rides on the world you're standing on." />;
   const catalog = buildStoreCatalog(custom || []);
   const shopper = chars.find(c => c.id === shopperId) || null;
   const header = <MarketHeader galaxy={galaxy} current={current} chars={chars} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={onSetLocation} isDM={isDM} />;
+  const inCart = (it, price) => (cart.find(l => l.key === cartKey(it, price)) || {}).qty || 0;
+  const addToCart = (it, price) => {
+    const key = cartKey(it, price);
+    setCart(cart.some(l => l.key === key) ? cart.map(l => l.key === key ? { ...l, qty: l.qty + 1 } : l) : [...cart, { key, item: it, price, qty: 1 }]);
+  };
+  const cartBar = <CartBar cart={cart} setCart={setCart} shopper={shopper} onCheckout={onCheckout} />;
   const planet = current?.planet;
   if (!planet) return <div>{header}<EmptyState icon={MapPin} title="Pick a location" body="Choose the world the party is on — the Night Market's stock depends on it." /></div>;
   if (!planetOpen(planet)) return <div>{header}<EmptyState icon={Rocket} title="No stall here" body={`${planet.name} is uninhabited — nobody's dealing. Set a populated world as your location.`} /></div>;
@@ -187,6 +244,7 @@ function NightMarketScreen({ galaxy, current, chars, shopperId, setShopperId, on
   return (
     <div>
       {header}
+      {cartBar}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
         <div style={{ fontSize: 12, color: COLORS.purple, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Tonight's Stall</div>
         <span style={{ fontSize: 11, color: COLORS.dim }}>{illicit ? "A black-market world — the stall runs deep." : (planet.stabilityIdx ?? 2) <= 1 ? "Low stability — desperate goods change hands." : "A quiet corner deal — thin pickings."} No tax, no receipts.</span>
@@ -196,7 +254,7 @@ function NightMarketScreen({ galaxy, current, chars, shopperId, setShopperId, on
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
         {stock.map(it => {
           const canBuy = !!shopper && (shopper.zeni || 0) >= it.price;
-          return <StoreItemCard key={(it.catalogId || it.name) + it.price} item={it} price={it.price} base={it.zeni} canBuy={canBuy} reason={!shopper ? "Pick who's shopping" : "Not enough Ƶeni"} onBuy={() => onBuy(it, it.price)} />;
+          return <StoreItemCard key={(it.catalogId || it.name) + it.price} item={it} price={it.price} base={it.zeni} canBuy={canBuy} reason={!shopper ? "Pick who's shopping" : "Not enough Ƶeni"} onBuy={() => onBuy(it, it.price)} onAdd={() => addToCart(it, it.price)} inCart={inCart(it, it.price)} />;
         })}
       </div>
       <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 10 }}>Stock is fixed per world until the DM pulls New Stock. Richer on black-market and low-stability worlds.</div>
@@ -209,6 +267,7 @@ function UniverseTab() {
   const [state, persist, error] = useSharedList("universe");
   const [chars, persistChars] = useSharedList("characters_v2");
   const [shopperId, setShopperId] = useState("");
+  const [cart, setCart] = useState([]);   // [{ key, item, price, qty }], per device
   // View mode is per-device (not shared): the DM's device runs "dm", players'
   // devices run "player" and only see revealed systems.
   const [viewOpt, setViewOpt] = useLocalOption("sdndbz_universe_view_v1", { mode: "player" });
@@ -224,6 +283,12 @@ function UniverseTab() {
   const buy = (catalogItem, price) => {
     if (!shopperId) return;
     persistChars((chars || []).map(c => c.id === shopperId ? { ...c, zeni: Math.max(0, (c.zeni || 0) - price), items: [...(c.items || []), purchaseItemFromCatalog(catalogItem)] } : c));
+  };
+  const checkout = () => {
+    const patch = checkoutPatch((chars || []).find(c => c.id === shopperId), cart);
+    if (!patch) return;
+    persistChars((chars || []).map(c => c.id === shopperId ? { ...c, ...patch } : c));
+    setCart([]);
   };
 
   return (
@@ -249,10 +314,10 @@ function UniverseTab() {
           : <EmptyState icon={Orbit} title="No galaxy charted yet" body="The DM hasn't forged the galaxy for this campaign — check back once they have." />)}
 
       {screen === "store" && (
-        <StoreScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} isDM={isDM} />
+        <StoreScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} cart={cart} setCart={setCart} onCheckout={checkout} isDM={isDM} />
       )}
       {screen === "market" && (
-        <NightMarketScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} onRefresh={refreshMarket} isDM={isDM} />
+        <NightMarketScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} onRefresh={refreshMarket} cart={cart} setCart={setCart} onCheckout={checkout} isDM={isDM} />
       )}
     </div>
   );
@@ -270,6 +335,8 @@ export {
   buildStoreCatalog,
   storeStock,
   purchaseItemFromCatalog,
+  cartTotal,
+  checkoutPatch,
   hashStr,
   mulberry32,
   nightMarketStock,

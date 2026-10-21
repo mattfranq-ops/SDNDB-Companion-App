@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight, Crosshair, Dices, Flame, Plus, Swords, Trash2, X, Zap } from "lucide-react";
 import { emitRoll } from "../../app/bus.js";
-import { exhaustionPenalty, exhaustionRanks, inKiExhaustion } from "../../engine/conditions.js";
+import { ROLL_MOD_TARGETS, exhaustionPenalty, exhaustionRanks, inKiExhaustion, rollModBonus } from "../../engine/conditions.js";
 import { drIgnoredBy, spendPatch } from "../../engine/damage.js";
 import { applyToCombatant } from "../session/apply.js";
 import { STAT_MOD_LABEL, activeConditionPower, activeFormPower, benefitsOfPower, charTotalLevel, computeKiRank, effectivePowerBonus, profBonusForLevel, statMod, totalPowerBonus } from "../../engine/core.js";
@@ -76,6 +76,47 @@ function MoveFields({ mv, onChange, onRemove, onReset, nameEditable = true }) {
       {mv.resolution === "save" && (
         <TextInput value={mv.saveAbility || ""} onChange={e => f({ saveAbility: e.target.value })} placeholder="Save ability (e.g. Dexterity)" style={{ fontSize: 11 }} />
       )}
+    </div>
+  );
+}
+
+// Saved roll modifiers: named bonuses or penalties that stay on the sheet and
+// are switched on when they apply (Bless +2 to attacks, a cursed scouter −1).
+function SavedRollMods({ char, set, cardStyle, headStyle }) {
+  const mods = char.rollMods || [];
+  const [name, setName] = useState("");
+  const [value, setValue] = useState("");
+  const [appliesTo, setAppliesTo] = useState("attack");
+  const save = (next) => set && set({ rollMods: next });
+  const add = () => {
+    const v = parseInt(value, 10);
+    if (!v) return;
+    save([...mods, { id: uid(), name: name.trim() || "Modifier", value: v, appliesTo, on: true }]);
+    setName(""); setValue("");
+  };
+  const upd = (id, patch) => save(mods.map(m => m.id === id ? { ...m, ...patch } : m));
+  const targetLabel = Object.fromEntries(ROLL_MOD_TARGETS);
+  return (
+    <div style={cardStyle}>
+      <div style={headStyle}>Saved modifiers</div>
+      {mods.length === 0 && <div style={{ fontSize: 12, color: COLORS.dim, marginBottom: 8 }}>Keep bonuses you use often here and switch them on when they apply. They're added to your rolls automatically.</div>}
+      {mods.map(m => (
+        <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, opacity: m.on ? 1 : 0.55 }}>
+          <Checkbox checked={m.on} onChange={() => upd(m.id, { on: !m.on })} />
+          <span style={{ fontWeight: 600, fontSize: 12.5, flex: 1 }}>{m.name}</span>
+          <span style={{ fontFamily: FONTS.mono, fontWeight: 700, color: m.value >= 0 ? COLORS.green : COLORS.red }}>{m.value >= 0 ? "+" : ""}{m.value}</span>
+          <span style={{ fontSize: 11, color: COLORS.muted, minWidth: 82 }}>{targetLabel[m.appliesTo] || m.appliesTo}</span>
+          <Btn size="sm" variant="ghost" onClick={() => save(mods.filter(x => x.id !== m.id))} aria-label={`Remove ${m.name}`}><Trash2 size={12}/></Btn>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
+        <TextInput placeholder="Name (Bless, high ground…)" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && add()} style={{ flex: 1, minWidth: 140 }} />
+        <TextInput type="number" placeholder="±" value={value} onChange={e => setValue(e.target.value)} onKeyDown={e => e.key === "Enter" && add()} style={{ width: 58, textAlign: "center" }} />
+        <Select value={appliesTo} onChange={e => setAppliesTo(e.target.value)}>
+          {ROLL_MOD_TARGETS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </Select>
+        <Btn size="sm" onClick={add} disabled={!parseInt(value, 10)}><Plus size={12}/> Add</Btn>
+      </div>
     </div>
   );
 }
@@ -184,7 +225,11 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     const dmg = parsed ? rollDice(parsed) : null;
     // Attack-Action attacks (Basic Moves) get the Physical/overpowered damage bonus.
     if (dmg && mv.attackAction && aaDmg > 0) { dmg.total += aaDmg; dmg.mod += aaDmg; }
-    const situ = Number(situBonus) || 0;
+    const dmgMods = rollModBonus(char, "damage").total;
+    if (dmg && dmgMods) { dmg.total += dmgMods; dmg.mod += dmgMods; }
+    // Saved modifiers switched on in the Combat tab, plus the one-off bonus.
+    const saved = rollModBonus(char, "attack").total;
+    const situ = (Number(situBonus) || 0) + saved;
     // Environmental (Harsh Galaxies) + equipped Fighting Style modifiers to attacks.
     const envAtk = (CURRENT_HOUSE_RULES.harshGalaxies ? envFlatMod("attacks") : 0) + styleFlatMod(char, "attacks");
     let head;
@@ -393,6 +438,8 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
         </div>
         {rollMode !== "normal" && <Tag color={rollMode === "adv" ? COLORS.green : COLORS.red}>{rollModeLabel(rollMode)} · next roll</Tag>}
       </div>
+
+      <SavedRollMods char={char} set={set} cardStyle={cardStyle} headStyle={headStyle} />
 
       {/* Passives — kept above the moves for at-a-glance reference */}
       <div style={cardStyle}>

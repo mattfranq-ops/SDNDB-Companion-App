@@ -15,6 +15,8 @@ import { Btn, ConfirmBtn, EmptyState, ErrorBanner, LoadingBlock, Tag, TextInput 
 import { COLORS, FONTS } from "../../ui/theme.js";
 import { ApplyPanel, DyingPanel, StatStepper, blankCombatant } from "./combat-parts.jsx";
 import { advanceTime, readTime } from "./time.jsx";
+import { EncounterRoller } from "./encounter-roller.jsx";
+import { npcFromBook } from "../npcs/creation.jsx";
 
 // Sheet toggles (Hyper Mode, Enraged, Boosted …) to switch off when these
 // condition names leave a row, unless another copy is still on it.
@@ -42,7 +44,7 @@ function InitiativeTab() {
   const [chars, persistChars] = useSharedList("characters_v2");
   const [npcs, persistNpcs] = useSharedList("npcs_v2");
   const [timeState, persistTime] = useSharedList("session_time");
-  const [picker, setPicker] = useState(null);   // "players" | "npcs" | null
+  const [picker, setPicker] = useState(null);   // "players" | "npcs" | "encounter" | null
   const [sel, setSel] = useState({});            // id -> true, staged in the picker
   const [atkId, setAtkId] = useState("");        // armed attacker (click a row to target)
   const [applyId, setApplyId] = useState("");    // row with the damage / heal panel open
@@ -330,6 +332,25 @@ function InitiativeTab() {
   });
   const openPicker = (which) => { setPicker(which); setSel({}); };
   const pickerList = picker === "players" ? (chars || []) : picker === "npcs" ? (npcs || []) : [];
+  // A rolled encounter: each fighter becomes a saved NPC, and lone fighters
+  // stay linked to it. Copies are numbered and unlinked (they'd share an id).
+  const addRolledEncounter = (picks) => {
+    const made = [], rows = [];
+    for (const { book, qty } of picks) {
+      const n = npcFromBook(book);
+      made.push(n);
+      for (let i = 0; i < qty; i++) {
+        const row = combatantFromNpc(n);
+        rows.push(qty === 1 ? row : { ...row, name: `${n.name} ${i + 1}`, sourceId: null, sourceType: null });
+      }
+    }
+    persistNpcs([...made, ...(npcs || [])]);
+    save({ combatants: [...data.combatants, ...rows] });
+    const text = `Random encounter: ${picks.map(p => `${p.qty > 1 ? p.qty + "× " : ""}${p.book.name}`).join(", ")}`;
+    logSession(text);
+    emitRoll({ label: "Random encounter", detail: `${rows.length} combatant${rows.length === 1 ? "" : "s"} added` });
+    setPicker(null);
+  };
   const commitPicker = () => {
     const maker = picker === "players" ? combatantFromChar : combatantFromNpc;
     const chosen = pickerList.filter(e => sel[e.id]).map(maker);
@@ -348,6 +369,7 @@ function InitiativeTab() {
         <Btn variant="gold" onClick={addCombatant}><Plus size={14}/> Add</Btn>
         <Btn onClick={() => openPicker("players")}><Users size={14}/> Add Players</Btn>
         <Btn onClick={() => openPicker("npcs")}><Skull size={14}/> Add NPCs</Btn>
+        <Btn onClick={() => openPicker(picker === "encounter" ? null : "encounter")}><Dices size={14}/> Roll Encounter</Btn>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", borderRadius: 7, overflow: "hidden", border: `1px solid ${COLORS.border}`, alignSelf: "center" }} title="Player view hides enemy resources; DM view shows everything">
           {[["dm", "DM", Eye], ["player", "Player", EyeOff]].map(([m, l, Ico]) => (
@@ -358,7 +380,8 @@ function InitiativeTab() {
         <Btn variant="blue" onClick={nextTurn}><ChevronRight size={14}/> Next Turn</Btn>
         <ConfirmBtn variant="danger" size="md" confirmTitle="Clear the whole encounter" onConfirm={resetCombat}><RotateCcw size={14}/> Reset</ConfirmBtn>
       </div>
-      {picker && (
+      {picker === "encounter" && <EncounterRoller chars={chars} onAdd={addRolledEncounter} onClose={() => setPicker(null)} />}
+      {picker && picker !== "encounter" && (
         <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontWeight: 700, fontSize: 13 }}>Add {picker === "players" ? "Players" : "NPCs"} to the encounter</span>
