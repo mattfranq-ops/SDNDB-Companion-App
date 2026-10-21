@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { HeartPulse, Minus, Plus, RotateCcw, Trash2, X, Zap } from "lucide-react";
 import { rarityInfo } from "../../data/book-tables.js";
 import { CYBERNETICS_RULES, HIGH_TECH_PARTS } from "../../data/hightech-data.js";
+import { logSession } from "../../app/bus.js";
+import { consumeItem } from "../../engine/consumables.js";
 import { charTotalLevel } from "../../engine/core.js";
 import { cyberneticKiControlPenalty, cyberneticLimit, cyberneticsExempt, cyberneticsUsed, hasCybernetic, installedParts, isAndroidBody, partIsAdvanced } from "../../engine/cybernetics.js";
 import { computeAttacksPerTurn } from "../../engine/derived.js";
@@ -38,7 +40,7 @@ function VitalsTab({ char, set }) {
   });
   const longRest = () => set({
     hp: char.maxHp || 0, ki: char.maxKi || 0, stamina: char.maxStamina || 0,
-    breatherPool: null, deathSaves: { success: 0, fail: 0 },
+    breatherPool: null, deathSaves: { success: 0, fail: 0 }, consumablesUsed: {},
     vitals: { ...v, exhaustion: Math.max(0, (v.exhaustion || 0) - 1), rest: 3 },
     // Regain half your Hit Dice (min 1, 5e rule); temp pools expire; God Ki refills.
     hitDiceUsed: Math.max(0, (char.hitDiceUsed || 0) - Math.max(1, Math.floor(charTotalLevel(char) / 2))),
@@ -412,6 +414,34 @@ function CyberneticsPanel({ char, set }) {
   );
 }
 
+// Potions, Senzu Beans and the like in the inventory, one tap to use.
+function ConsumablesCard({ char, set }) {
+  const [msg, setMsg] = useState("");
+  const list = (char.items || []).filter(it => it && it.restore);
+  if (!list.length) return null;
+  const use = (it) => {
+    const r = consumeItem(char, it);
+    if (!r.ok) { setMsg(r.reason); return; }
+    set(r.patch);
+    setMsg(r.summary);
+    logSession(`${char.name || "A fighter"} used ${r.summary}`, char.name || "");
+  };
+  return (
+    <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.green}44`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <div style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Consumables</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {list.map(it => (
+          <Btn key={it.id} size="sm" onClick={() => use(it)} title={it.notes || ""}>
+            {it.name} ×{it.qty || 1} · {Object.entries(it.restore).filter(([k]) => k !== "exhaustion").map(([k, v]) => `${v === "full" ? "full" : v} ${k === "hp" ? "HP" : k === "ki" ? "Ki" : "Stamina"}`).join(", ")}
+          </Btn>
+        ))}
+      </div>
+      {msg && <div style={{ fontSize: 12, color: COLORS.green, marginTop: 8 }}>{msg}</div>}
+      <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 6 }}>Hetap and Senzu Beans after the first before a Long Rest add Exhaustion; one Premium Bento Box per Long Rest.</div>
+    </div>
+  );
+}
+
 function InventoryTab({ char, set }) {
   const [houseRules] = useHouseRules();
   const attuneCap = attunementCapFor(houseRules);
@@ -423,6 +453,7 @@ function InventoryTab({ char, set }) {
           <span style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Ƶeni</span>
           <CommaNumInput value={char.zeni || 0} onValue={v => set({ zeni: v })} style={{ width: 140, textAlign: "center", padding: "5px 6px" }} />
         </div>
+        <ConsumablesCard char={char} set={set} />
         <ItemsEditor items={char.items} onChange={next => set({ items: next })} />
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14, marginTop: 16 }}>
           <BondSlots label="Attunement" max={attuneCap} items={char.attunements} onChange={next => set({ attunements: next })} color={COLORS.blue} />

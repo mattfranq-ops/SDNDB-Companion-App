@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { Coins, MapPin, Minus, Orbit, Plus, Rocket, RotateCcw, ShoppingCart, X } from "lucide-react";
 import { useLocalOption } from "../../state/local-options.js";
 import { RARITY_TIERS, rarityInfo } from "../../data/book-tables.js";
+import { CONSUMABLE_DATA, GEAR_DATA, GEAR_RULES, WEAPON_DATA } from "../../data/gear-data.js";
 import { HIGH_TECH_PARTS } from "../../data/hightech-data.js";
 import { BOOK_EQUIPMENT, EQUIP_SLOTS, slotTypeLabel } from "../../engine/equipment.js";
 import { UNI_TECH, ensureGalaxyLayout } from "../../engine/universe.js";
 import { uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
-import { Btn, EmptyState, ErrorBanner, LoadingBlock, ScannerHeader, Select, Tag } from "../../ui/atoms.jsx";
+import { Btn, EmptyState, ErrorBanner, LoadingBlock, ScannerHeader, Select, Tag, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
 import { GalaxyForge, GalaxyMap } from "./galaxy-views.jsx";
 
@@ -36,22 +37,33 @@ const planetOpen = (planet) => !!planet && !!planet.economy && planet.economy !=
 const wealthRarityCap = (planet) => [0, 1, 2, 3, 5][Math.max(0, Math.min(4, planet?.wealthIdx ?? 2))];
 const techNeeded = (zeni) => zeni <= 100 ? 0 : zeni <= 1000 ? 1 : zeni <= 5000 ? 2 : 3;
 function storePrice(base, planet, kind) {
-  const mult = kind === "hightech" ? storeEcon(planet).tech : storeEcon(planet).armor;
+  const mult = kind === "hightech" || kind === "tech" ? storeEcon(planet).tech : storeEcon(planet).armor;
   return Math.max(1, Math.round((base || 0) * mult * (1 + (planet?.taxRate || 0) / 100)));
 }
+// Ch.9 technology with a price: Scientific Marvels, Mechs and Vehicles.
+const TECH_FOR_SALE = GEAR_RULES.filter(r => r.zeni && ["Scientific Marvels", "Mechs", "Vehicles"].includes(r.section));
+const GEAR_GROUP = { Gear: "Adventuring Gear", Scouter: "Adventuring Gear", Ammunition: "Weapons", Tool: "Tools" };
 function buildStoreCatalog(customHighTech) {
   const armor = BOOK_EQUIPMENT.map(e => ({ ...e, kind: "equipment", storeGroup: "Armor & Shields" }));
+  const weapons = WEAPON_DATA.map(e => ({ ...e, kind: "equipment", storeGroup: "Weapons" }));
+  const gear = GEAR_DATA.map(e => ({ ...e, kind: "equipment", storeGroup: GEAR_GROUP[e.category] || "Adventuring Gear" }));
+  const consumables = CONSUMABLE_DATA.map(e => ({ ...e, kind: "equipment", storeGroup: "Consumables" }));
+  const machines = TECH_FOR_SALE.map(r => ({
+    catalogId: r.id, name: r.name, kind: "tech", storeGroup: "Technology", category: r.section === "Vehicles" ? "Vehicle" : r.section === "Mechs" ? "Mech" : "Technology",
+    zeni: r.zeni, rarity: r.rarity || "uncommon", slot: "", notes: r.text,
+  }));
   const tech = [...HIGH_TECH_PARTS, ...(customHighTech || [])].map(p => ({
     catalogId: p.id, name: p.name, kind: "hightech", storeGroup: "High-Tech Parts",
     zeni: p.zeni, rarity: "uncommon", integrationDC: p.integrationDC, effect: p.effect, advancedTech: p.advancedTech,
   }));
-  return [...armor, ...tech];
+  return [...armor, ...weapons, ...consumables, ...gear, ...tech, ...machines];
 }
-const storeStock = (planet, catalog) => catalog.filter(it => it.kind === "hightech"
+const storeStock = (planet, catalog) => catalog.filter(it => it.kind === "hightech" || it.kind === "tech"
   ? (storeEcon(planet).techStock !== false && planetTechIdx(planet) >= techNeeded(it.zeni))
   : RTIER_IDX(it.rarity) <= wealthRarityCap(planet));
 function purchaseItemFromCatalog(it) {
   if (it.kind === "equipment") { const { kind, storeGroup, ...gear } = it; return { ...gear, id: uid(), qty: 1 }; }
+  if (it.kind === "tech") return { id: uid(), catalogId: it.catalogId, name: it.name, category: it.category, rarity: it.rarity, zeni: it.zeni, qty: 1, notes: it.notes };
   return { id: uid(), name: it.name, rarity: it.rarity || "uncommon", zeni: it.zeni, qty: 1, notes: "High-Tech Part — install via Inventory → Cybernetics." };
 }
 // Buying a cart: one Ƶeni deduction for the lot, one inventory entry per unit
@@ -134,6 +146,15 @@ function MarketHeader({ galaxy, current, chars, shopperId, setShopperId, onSetLo
   );
 }
 
+// One line of the numbers that matter for an item on the shelf.
+function itemStatLine(item) {
+  if (item.kind === "hightech") return `Integration DC ${item.integrationDC}`;
+  if (item.kind === "tech") return item.category;
+  if (item.damageDice) return [`${item.damageDice} ${item.damageType}`, item.properties, item.mastery && `Mastery: ${item.mastery}`].filter(Boolean).join(" · ");
+  if (item.restore) return "Restores " + Object.entries(item.restore).map(([k, v]) => k === "exhaustion" ? `${v} Exhaustion` : `${v === "full" ? "all" : v} ${k === "hp" ? "HP" : k === "ki" ? "Ki" : "Stamina"}`).join(", ");
+  return [item.acBase ? `AC ${item.acBase}` : null, item.acBonus ? `+${item.acBonus} AC` : null, item.dr ? `DR ${item.dr}` : null, item.slot ? slotTypeLabel(item.slot) : item.category, item.weight].filter(Boolean).join(" · ");
+}
+
 function StoreItemCard({ item, price, base, canBuy, reason, onBuy, onAdd, inCart = 0 }) {
   const rc = rarityInfo(item.rarity).color;
   const discounted = base != null && price < base;
@@ -143,10 +164,8 @@ function StoreItemCard({ item, price, base, canBuy, reason, onBuy, onAdd, inCart
         <span style={{ fontWeight: 700, fontSize: 13 }}>{item.name}</span>
         <Tag color={rc}>{rarityInfo(item.rarity).label}</Tag>
       </div>
-      {item.kind === "equipment"
-        ? <div style={{ fontSize: 11, color: COLORS.muted, fontFamily: FONTS.mono }}>{[item.acBase ? `AC ${item.acBase}` : null, item.acBonus ? `+${item.acBonus} AC` : null, item.dr ? `DR ${item.dr}` : null, slotTypeLabel(item.slot)].filter(Boolean).join(" · ")}</div>
-        : <div style={{ fontSize: 11, color: COLORS.blue, fontFamily: FONTS.mono }}>Integration DC {item.integrationDC}</div>}
-      {(item.notes || item.effect) && <div style={{ fontSize: 11.5, color: COLORS.muted, lineHeight: 1.45 }}>{item.notes || item.effect}</div>}
+      <div style={{ fontSize: 11, color: item.kind === "hightech" ? COLORS.blue : COLORS.muted, fontFamily: FONTS.mono }}>{itemStatLine(item)}</div>
+      {(item.notes || item.effect) && <div title={item.notes || item.effect} style={{ fontSize: 11.5, color: COLORS.muted, lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "pre-line" }}>{item.notes || item.effect}</div>}
       <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: `1px solid ${COLORS.border}` }}>
         <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
           <span style={{ fontFamily: FONTS.mono, fontWeight: 700, color: COLORS.gold }}>Ƶ {price.toLocaleString()}</span>
@@ -193,8 +212,11 @@ function CartBar({ cart, setCart, shopper, onCheckout }) {
   );
 }
 
+const STORE_GROUPS = ["Armor & Shields", "Weapons", "Consumables", "Adventuring Gear", "Tools", "High-Tech Parts", "Technology"];
 function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, onBuy, cart, setCart, onCheckout, isDM }) {
   const [custom] = useSharedList("custom_hightech_v1");
+  const [group, setGroup] = useState("All");
+  const [query, setQuery] = useState("");
   if (!galaxy) return <EmptyState icon={Coins} title="No galaxy charted yet" body="Forge a galaxy first — the Store prices gear by the planet you're standing on." />;
   const catalog = buildStoreCatalog(custom || []);
   const shopper = chars.find(c => c.id === shopperId) || null;
@@ -208,13 +230,19 @@ function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLoc
   const planet = current?.planet;
   if (!planet) return <div>{header}<EmptyState icon={MapPin} title="Pick a location" body="Choose the world the party is on — the Store stocks and prices gear to its economy and local tax." /></div>;
   if (!planetOpen(planet)) return <div>{header}<EmptyState icon={Coins} title="No market here" body={`${planet.name} is uninhabited — no vendors. Set a populated world as your location.`} /></div>;
-  const stock = storeStock(planet, catalog);
-  const groups = ["Armor & Shields", "High-Tech Parts"];
+  const stock = storeStock(planet, catalog).filter(i => !query || `${i.name} ${i.category || ""} ${i.properties || ""}`.toLowerCase().includes(query.toLowerCase()));
+  const shown = group === "All" ? STORE_GROUPS : [group];
   return (
     <div>
       {header}
       {cartBar}
-      {groups.map(g => {
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+        {["All", ...STORE_GROUPS].map(g => (
+          <button key={g} onClick={() => setGroup(g)} style={{ padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, cursor: "pointer", border: `1px solid ${group === g ? COLORS.gold : COLORS.border}`, background: group === g ? `${COLORS.gold}1A` : COLORS.panel2, color: group === g ? COLORS.gold : COLORS.muted }}>{g}</button>
+        ))}
+        <TextInput value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the shelves" style={{ width: 200, marginLeft: "auto" }} />
+      </div>
+      {shown.map(g => {
         const items = stock.filter(i => i.storeGroup === g);
         if (!items.length) return null;
         return (

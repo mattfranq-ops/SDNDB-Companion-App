@@ -63,6 +63,19 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   Elite Critical Technique is no longer a limited pool in 5.0, so it's gone.
 - Superiority Dice regain Ki Rank dice at the start of the turn, not the whole pool.
 
+**Equipment from the 5.0 book** (Ch.9, pp. 437–488)
+- The Store now sells all 71 weapons (damage, properties and Weapon Mastery), ammunition and
+  magazines, the adventuring gear and tool tables, Scouters, every size of Hetap, Sage Water
+  and Vitadrink, the Premium Bento Box and Senzu Beans, plus the Scientific Marvels, Mechs and
+  Vehicles that have a price (gated by the planet's tech level). Shelves have group filters and a search.
+- Bought weapons arrive with their stats and go straight into an empty hand.
+- **Consumables** in the inventory have a one-tap Use: it rolls what the item restores, caps at
+  your maximum and uses one up. A second Hetap or Senzu Bean before a Long Rest adds the book's
+  Exhaustion, and a Premium Bento Box works once per Long Rest.
+- A new **Equipment** page in the Compendium lists every weapon, armor, consumable, gear and tool,
+  plus the rules entries: weapon properties, magical gear, all 21 enchantments, heroic armors
+  and weapons, Dragon Balls, Nimbus, Potara, the Scientific Marvels, mechs and 19 vehicles.
+
 **Species and Heritages from the 5.0 book** (Ch.3, pp. 31–88)
 - All 18 species now carry their full traits (the 8 that were name-only, Chronin through Zoolatar,
   are filled in) plus every Species Feature, option list (Bestial Characteristics, Strange

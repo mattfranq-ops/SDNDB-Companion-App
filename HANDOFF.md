@@ -51,8 +51,9 @@ Two reports in the project's shared files say what's left:
   slots and families, Ramp Up), and `test/forms.test.js` checks it. Species and heritages are done:
   `data/species-data.js` holds all 18 species and 11 heritages with feature text,
   `engine/species.js` runs the heritage restrictions and the swap-up-to-3 rule, and
-  `test/species.test.js` checks it. Biology Feats are in `data/biology-feat-data.js`. Next in that report: gear (Ch.9), then
-  Soulbinding (Ch.10).
+  `test/species.test.js` checks it. Biology Feats are in `data/biology-feat-data.js`. Gear is in `data/gear-data.js` (weapons, gear, consumables, rules
+  entries), `engine/consumables.js` uses consumables, and `test/gear.test.js` checks both. Next in
+  that report: Soulbinding (Ch.10).
 - Every gap found against the Cyberpunk RED Companion is closed (encounters, clocks, oracle,
   cart, map pins, saved roll modifiers). `engine/encounters.js` and `engine/table-tools.js`
   hold their rules.

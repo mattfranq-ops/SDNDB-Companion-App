@@ -1,3 +1,4 @@
+import { CONSUMABLE_DATA, GEAR_DATA, WEAPON_DATA } from "../data/gear-data.js";
 import { uid } from "../lib/dice.js";
 import { CURRENT_ENV_GRAVITY, CURRENT_HOUSE_RULES, envWeightedRanks } from "../state/hooks.js";
 import { styleFlatMod, styleWeightedRanks } from "../state/registry.js";
@@ -125,9 +126,10 @@ const weightMultiplier = (char) => Math.pow(1.5, computeWeighted(char).net);
 function catalogToItem(entry) {
   return normalizeItem({ ...entry, id: uid(), catalogId: entry.catalogId || entry.id || null });
 }
-// The equipment dictionary = book equipment + any custom entry flagged isEquipment.
+// The equipment dictionary = book armor, weapons, gear and consumables (Ch.9)
+// + any custom entry flagged isEquipment.
 function equipmentCatalog(customEntries) {
-  return [...BOOK_EQUIPMENT, ...(customEntries || []).filter(e => e && e.isEquipment)];
+  return [...BOOK_EQUIPMENT, ...WEAPON_DATA, ...CONSUMABLE_DATA, ...GEAR_DATA, ...(customEntries || []).filter(e => e && e.isEquipment)];
 }
 const catalogKey = (e) => e.catalogId || e.id;
 
@@ -147,6 +149,11 @@ function normalizeItem(it) {
     acBonus: it.acBonus || 0, dr: it.dr || 0, stealthDisadv: it.stealthDisadv || false, strReq: it.strReq || 0,
     // weapon
     damageDice: it.damageDice || "", damageType: it.damageType || "", attackStat: it.attackStat || "str",
+    // book weapon / gear / consumable details (Ch.9), kept when present
+    ...(it.properties ? { properties: it.properties } : {}), ...(it.mastery ? { mastery: it.mastery } : {}),
+    ...(it.weaponGroup ? { weaponGroup: it.weaponGroup } : {}), ...(it.weight ? { weight: it.weight } : {}),
+    ...(it.restore ? { restore: it.restore } : {}), ...(it.exhaustionAfterFirst ? { exhaustionAfterFirst: it.exhaustionAfterFirst } : {}),
+    ...(it.oncePerLongRest ? { oncePerLongRest: true } : {}),
     // named conditions/effects this item grants (descriptive for now)
     effects: Array.isArray(it.effects) ? it.effects.map(e => ({ id: e.id || uid(), name: e.name || "", description: e.description || "" })) : [],
     // Ability Score changes while equipped — see effectiveStats().

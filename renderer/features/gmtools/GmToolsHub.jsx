@@ -278,6 +278,7 @@ function GmToolsHub({ setScreen }) {
     { key: "compendium", label: "Data Pool", icon: Globe2, color: COLORS.blue },
     { key: "feats", label: "Feats", icon: ClipboardList, color: COLORS.amber },
     { key: "techniques", label: "Techniques", icon: Zap, color: COLORS.blue },
+    { key: "equipment", label: "Equipment", icon: Swords, color: COLORS.red },
     { key: "notes", label: "Notes", icon: FileText, color: COLORS.green },
     { key: "npcs", label: "NPCs", icon: Sparkles, color: COLORS.purple },
     { key: "materoids", label: "Materoids Flavors", icon: Settings, color: COLORS.purple },

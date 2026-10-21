@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BaseTab } from "../features/base/BaseTab.jsx";
 import { CharactersTab } from "../features/characters/CharactersTab.jsx";
 import { CompendiumTab } from "../features/compendium/compendium.jsx";
+import { EquipmentCompendiumTab } from "../features/compendium/gear.jsx";
 import { FeatsTab } from "../features/compendium/feats.jsx";
 import { NotesTab } from "../features/compendium/notes.jsx";
 import { TechniquesCompendiumTab } from "../features/compendium/techniques.jsx";
@@ -28,7 +29,8 @@ const GM_SCREENS = {
   worldrules: { title: "WORLD & RULES", subtitle: "The editable building blocks the app generates and runs on. Toggle, tune, and give them real effects.", Component: WorldRulesTab },
   builders: { title: "BUILDERS", subtitle: "DM quick-builders: roll a war goal or a raid party, then drop it into play.", Component: BuildersTab },
   compendium: { title: "DATA POOL", subtitle: "Real book Classes + your custom compendium entries.", Component: CompendiumTab },
-  feats: { title: "FEATS", subtitle: "Every Epic Boon, Fighting Style, General, Heroic, Stance, Trained, and Origin Feat from the book, plus your own homebrew.", Component: FeatsTab },
+  feats: { title: "FEATS", subtitle: "Every Epic Boon, Fighting Style, General, Heroic, Stance, Trained, Origin and Biology Feat from the book, plus your own homebrew.", Component: FeatsTab },
+  equipment: { title: "EQUIPMENT", subtitle: "Every weapon, piece of gear, consumable, enchantment, heroic item, marvel, mech and vehicle from Ch.9.", Component: EquipmentCompendiumTab },
   techniques: { title: "TECHNIQUES", subtitle: "Every Generic, Super, External, Misc, and Ultimate Technique from the book.", Component: TechniquesCompendiumTab },
   notes: { title: "NOTES", subtitle: "", Component: NotesTab },
   npcs: { title: "NPCS", subtitle: "", Component: NpcTab },
