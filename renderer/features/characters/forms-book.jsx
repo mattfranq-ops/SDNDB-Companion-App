@@ -40,11 +40,15 @@ function BookFormPicker({ char, forms, set }) {
   const [showAll, setShowAll] = useState(false);
   const has = (b) => forms.some(f => f.bookId === b.id);
   const species = (char.species || "").toLowerCase();
+  const heritage = (char.heritage || "").toLowerCase();
   const list = useMemo(() => FORM_DATA.filter(b => {
     if (q && !`${b.name} ${b.family || ""} ${b.group}`.toLowerCase().includes(q.toLowerCase())) return false;
     if (showAll || q) return true;
-    return b.section !== "biology" || !b.species || species.includes(b.species.toLowerCase());
-  }), [q, showAll, species]);
+    if (b.section !== "biology") return true;
+    // Heritage Biology forms list under the heritage's name (Speedsters → Speedster).
+    if (!b.species) return !!heritage && b.group.toLowerCase().replace(/s$/, "") === heritage.replace(/s$/, "");
+    return species.includes(b.species.toLowerCase());
+  }), [q, showAll, species, heritage]);
   const add = (b) => set({ forms: [...forms, formFromBook(b, FORM_MOD_DATA, uid)] });
   const groups = ["biology", "general", "restricted"].map(s => [s, list.filter(b => b.section === s)]).filter(([, l]) => l.length);
   return (

@@ -48,8 +48,10 @@ Two reports in the project's shared files say what's left:
   options, saves, proficiencies, table columns), and `test/classes.test.js` checks it. Forms
   are done too: `data/form-data.js` holds all 56 Ch.6 forms and 58 Form Modifications with the
   book's formulas, `engine/forms.js` evaluates them (Power, Upkeep, Awaken Limit, Ascend cost,
-  slots and families, Ramp Up), and `test/forms.test.js` checks it. Next in that report: the
-  species stubs, heritages and Biology feats, then gear.
+  slots and families, Ramp Up), and `test/forms.test.js` checks it. Species and heritages are done:
+  `data/species-data.js` holds all 18 species and 11 heritages with feature text,
+  `engine/species.js` runs the heritage restrictions and the swap-up-to-3 rule, and
+  `test/species.test.js` checks it. Next in that report: Biology feats, then gear.
 - Every gap found against the Cyberpunk RED Companion is closed (encounters, clocks, oracle,
   cart, map pins, saved roll modifiers). `engine/encounters.js` and `engine/table-tools.js`
   hold their rules.

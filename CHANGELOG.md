@@ -63,6 +63,19 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   Elite Critical Technique is no longer a limited pool in 5.0, so it's gone.
 - Superiority Dice regain Ki Rank dice at the start of the turn, not the whole pool.
 
+**Species and Heritages from the 5.0 book** (Ch.3, pp. 31–88)
+- All 18 species now carry their full traits (the 8 that were name-only, Chronin through Zoolatar,
+  are filled in) plus every Species Feature, option list (Bestial Characteristics, Strange
+  Quirks, Alien Characteristics…) and Sub-Species with its rules text. Click a feature under the
+  Species field to read it. Categories follow the book (Saiyan, Namekian and Majin are Otherworldly).
+- All 11 Heritages, General and Restricted. The Heritage list only offers the ones your species
+  can take (no Saiyan Blood for a Saiyan, no Daemonchilde for an Otherworldly species).
+- The swap rule: pick which Species Feature each Heritage Feature replaces, up to three.
+  Features that name their replacement (S-Cell Overload's Berserker Sub-Species replaces Super
+  Saiyan) are set for you. The Features tab shows what you have, swapped-out features struck through.
+- Heritage Biology forms (Speedster, Prehistoric Blood, S-Cell Overload) show in the form picker
+  once you have the Heritage.
+
 **Forms from the 5.0 book** (Ch.6, pp. 201–248)
 - All 56 Forms and 58 Form Modifications with their rules text, Power, Awaken Limit, Upkeep and
   Cost to Ascend. Pick them in Growth → Forms: your species' Biology forms show first, with

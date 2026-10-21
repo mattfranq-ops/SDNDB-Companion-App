@@ -5,7 +5,6 @@ import { TRAINING_BOON_SPENDS } from "../../data/book-tables.js";
 import { CLASS_DATA, CLASS_NAMES } from "../../data/class-data.js";
 import { FEAT_DATA } from "../../data/feat-data.js";
 import { NPC_POOLS } from "../../data/name-pools.js";
-import { HERITAGE_DATA } from "../../data/species-data.js";
 import { charClasses, charTotalLevel, computeKiRank, computeMaxStamina, profBonusForLevel, statMod } from "../../engine/core.js";
 import { computeAttacksPerTurn, featsOwed, techniquesKnownBudget } from "../../engine/derived.js";
 import { exhaustionPenalty, rollModBonus } from "../../engine/conditions.js";
@@ -20,6 +19,7 @@ import { miniBtnStyle } from "../session/combat-parts.jsx";
 import { RESOURCE_RESET_LABEL } from "./magic.jsx";
 import { useSpeciesList } from "./model.js";
 import { ClassSummary, ClassTable, FeatureList, FeatureRulesList } from "./class-features.jsx";
+import { HeritagePicker, HeritageSwaps, SpeciesFeatureList, SpeciesTraits } from "./species-book.jsx";
 
 function ClassPicker({ value, onConfirm, onCancel }) {
   const [sel, setSel] = useState(value || CLASS_NAMES[0]);
@@ -61,35 +61,6 @@ function AbilityTab({ classId, level }) {
       <div style={{ marginBottom: 14 }}><ClassSummary classId={classId} /></div>
       <div style={{ fontSize: 11, color: COLORS.dim, marginBottom: 6 }}>Click a feature to read its rules.</div>
       <ClassTable classId={classId} level={level || 20} />
-    </div>
-  );
-}
-
-// Book species traits readout — shows under the Species field when the selected
-// species matches book data (SPECIES_DATA).
-function SpeciesTraits({ species }) {
-  const sp = speciesByName(species);
-  if (!sp) return null;
-  const row = (label, val) => val ? (
-    <div style={{ display: "flex", gap: 6, fontSize: 11.5, lineHeight: 1.5 }}>
-      <span style={{ color: COLORS.dim, minWidth: 92, flexShrink: 0 }}>{label}</span>
-      <span style={{ color: COLORS.muted }}>{val}</span>
-    </div>
-  ) : null;
-  return (
-    <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 12, marginBottom: 10 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-        <span style={{ fontWeight: 700, fontSize: 13 }}>{sp.name}</span>
-        <span style={{ fontSize: 9.5, color: COLORS.dim, textTransform: "uppercase", letterSpacing: 0.5 }}>{sp.category}</span>
-        {!sp.complete && <span style={{ fontSize: 9, color: COLORS.amber }}>partial data</span>}
-      </div>
-      {sp.description && <div style={{ fontSize: 11.5, color: COLORS.muted, lineHeight: 1.5, marginBottom: 8, fontStyle: "italic" }}>{sp.description}</div>}
-      {row("Ability Scores", sp.abilityScoreIncrease)}
-      {row("Speed", sp.speed)}
-      {row("Languages", sp.languages)}
-      {row("Skills", sp.skills)}
-      {sp.features?.length > 0 && row("Features", sp.features.join(", "))}
-      {sp.subSpecies?.length > 0 && row("Sub-Species", sp.subSpecies.join(", "))}
     </div>
   );
 }
@@ -184,10 +155,6 @@ function FeaturesTab({ char, set }) {
       : []
   );
   const multi = charClasses(char).length > 1;
-  // Species features auto-show from SPECIES_DATA (player feedback #10). Names are
-  // book-extracted; full text arrives with the Track B extraction pass.
-  const sp = speciesByName(char.species);
-  const speciesFeatures = (sp && sp.features) || [];
   const addCustom = () => {
     if (!newName) return;
     const max = newMax ? Number(newMax) : null;
@@ -226,16 +193,7 @@ function FeaturesTab({ char, set }) {
           ))}
         </div>
       )}
-      {speciesFeatures.length > 0 && (
-        <>
-          <div style={{ fontSize: 11.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Species Features ({sp.name})</div>
-          <div style={{ marginBottom: 18 }}>
-            {speciesFeatures.map((name, i) => (
-              <InfoChip key={i} label={name} color={COLORS.green} />
-            ))}
-          </div>
-        </>
-      )}
+      <SpeciesFeatureList char={char} />
       <div style={{ fontSize: 11.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Other Features (Feats, Custom)</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
         {char.features.map((f, i) => {
@@ -569,8 +527,9 @@ function BioTab({ char, set, withName, withNotes, customSpeciesInput, setCustomS
       <SpeciesSkillChoice char={char} set={set} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Field label="Sub-Species"><SelectWithCustom value={char.subspecies} onChange={v => set({ subspecies: v })} options={(speciesByName(char.species) || {}).subSpecies || []} placeholder="Sub-species…" /></Field>
-        <Field label="Heritage"><SelectWithCustom value={char.heritage || ""} onChange={v => set({ heritage: v })} options={HERITAGE_DATA.map(h => h.name)} placeholder="e.g. Mutant, Blessing of Komedi" /></Field>
+        <Field label="Heritage"><HeritagePicker char={char} set={set} /></Field>
       </div>
+      <HeritageSwaps char={char} set={set} />
       <Field label="Picture URL"><TextInput value={char.pictureUrl || ""} onChange={e => set({ pictureUrl: e.target.value })} placeholder="https:// — shows on the sheet header" /></Field>
       <div style={{ fontSize: 11.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", margin: "6px 0 8px" }}>Appearance</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
