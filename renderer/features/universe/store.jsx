@@ -3,7 +3,7 @@ import { Coins, MapPin, Minus, Orbit, Plus, Rocket, RotateCcw, ShoppingCart, X }
 import { useLocalOption } from "../../state/local-options.js";
 import { RARITY_TIERS, rarityInfo } from "../../data/book-tables.js";
 import { HIGH_TECH_PARTS } from "../../data/hightech-data.js";
-import { BOOK_EQUIPMENT, slotTypeLabel } from "../../engine/equipment.js";
+import { BOOK_EQUIPMENT, EQUIP_SLOTS, slotTypeLabel } from "../../engine/equipment.js";
 import { UNI_TECH, ensureGalaxyLayout } from "../../engine/universe.js";
 import { uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
@@ -55,13 +55,24 @@ function purchaseItemFromCatalog(it) {
   return { id: uid(), name: it.name, rarity: it.rarity || "uncommon", zeni: it.zeni, qty: 1, notes: "High-Tech Part — install via Inventory → Cybernetics." };
 }
 // Buying a cart: one Ƶeni deduction for the lot, one inventory entry per unit
-// (each can be equipped or installed on its own). Null when it can't be paid.
+// (each can be equipped or installed on its own). Gear goes straight into an
+// empty slot that fits it; nothing already worn is swapped out. Null when it
+// can't be paid.
 const cartTotal = (cart) => cart.reduce((s, l) => s + l.price * l.qty, 0);
 function checkoutPatch(char, cart) {
   const total = cartTotal(cart);
   if (!char || !cart.length || (char.zeni || 0) < total) return null;
   const bought = cart.flatMap(l => Array.from({ length: l.qty }, () => purchaseItemFromCatalog(l.item)));
-  return { zeni: (char.zeni || 0) - total, items: [...(char.items || []), ...bought] };
+  const equipment = { ...(char.equipment || {}) };
+  const held = new Set((char.items || []).map(i => i.id));
+  const filled = (k) => equipment[k] && held.has(equipment[k]);
+  const equipped = [];
+  for (const it of bought) {
+    if (!it.slot) continue;
+    const slot = EQUIP_SLOTS.find(sl => sl.type === it.slot && !filled(sl.key));
+    if (slot) { equipment[slot.key] = it.id; held.add(it.id); equipped.push(it.name); }
+  }
+  return { zeni: (char.zeni || 0) - total, items: [...(char.items || []), ...bought], equipment, _equipped: equipped };
 }
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < (s || "").length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -268,6 +279,7 @@ function UniverseTab() {
   const [chars, persistChars] = useSharedList("characters_v2");
   const [shopperId, setShopperId] = useState("");
   const [cart, setCart] = useState([]);   // [{ key, item, price, qty }], per device
+  const [notice, setNotice] = useState("");
   // View mode is per-device (not shared): the DM's device runs "dm", players'
   // devices run "player" and only see revealed systems.
   const [viewOpt, setViewOpt] = useLocalOption("sdndbz_universe_view_v1", { mode: "player" });
@@ -287,8 +299,10 @@ function UniverseTab() {
   const checkout = () => {
     const patch = checkoutPatch((chars || []).find(c => c.id === shopperId), cart);
     if (!patch) return;
-    persistChars((chars || []).map(c => c.id === shopperId ? { ...c, ...patch } : c));
+    const { _equipped, ...rest } = patch;
+    persistChars((chars || []).map(c => c.id === shopperId ? { ...c, ...rest } : c));
     setCart([]);
+    if (_equipped.length) setNotice(`Equipped ${_equipped.join(", ")}`);
   };
 
   return (
@@ -313,11 +327,12 @@ function UniverseTab() {
         : isDM ? <GalaxyForge onGenerate={setGalaxy} />
           : <EmptyState icon={Orbit} title="No galaxy charted yet" body="The DM hasn't forged the galaxy for this campaign — check back once they have." />)}
 
+      {notice && screen !== "map" && <div style={{ fontSize: 12, color: COLORS.green, marginBottom: 10 }}>{notice}</div>}
       {screen === "store" && (
-        <StoreScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} cart={cart} setCart={setCart} onCheckout={checkout} isDM={isDM} />
+        <StoreScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} cart={cart} setCart={(c) => { setNotice(""); setCart(c); }} onCheckout={checkout} isDM={isDM} />
       )}
       {screen === "market" && (
-        <NightMarketScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} onRefresh={refreshMarket} cart={cart} setCart={setCart} onCheckout={checkout} isDM={isDM} />
+        <NightMarketScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} onRefresh={refreshMarket} cart={cart} setCart={(c) => { setNotice(""); setCart(c); }} onCheckout={checkout} isDM={isDM} />
       )}
     </div>
   );

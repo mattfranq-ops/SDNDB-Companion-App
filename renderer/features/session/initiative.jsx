@@ -421,6 +421,17 @@ function InitiativeTab() {
           <Btn size="sm" variant="ghost" onClick={() => setAtkId("")}><X size={13} /> Cancel</Btn>
         </div>
       )}
+      {sorted.length > 1 && (() => {
+        // Whose turn it is and who's on deck, like the turn bar at a real table.
+        const i = data.turn % sorted.length;
+        const now = sorted[i], next = sorted[(i + 1) % sorted.length];
+        return (
+          <div style={{ display: "flex", gap: 14, alignItems: "baseline", fontSize: 12.5, marginBottom: 10, flexWrap: "wrap" }}>
+            <span><span style={{ color: COLORS.muted }}>Now </span><b style={{ color: COLORS.gold }}>{now.name}</b></span>
+            <span><span style={{ color: COLORS.muted }}>Up next </span><b style={{ color: COLORS.blue }}>{next.name}</b></span>
+          </div>
+        );
+      })()}
       {sorted.length === 0 ? (
         <EmptyState icon={Swords} title="No combatants" body="Add everyone rolling initiative." />
       ) : (

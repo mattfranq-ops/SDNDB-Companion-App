@@ -13,6 +13,17 @@ describe("store cart", () => {
     expect(p.items[1].kind).toBeUndefined();
     expect(new Set(p.items.map(i => i.id)).size).toBe(4);
   });
+  it("equips gear into empty slots only", () => {
+    const shield = { kind: "equipment", name: "Shield", slot: "held", zeni: 10 };
+    const gi = { kind: "equipment", name: "Padded Gi", slot: "body", zeni: 5 };
+    const worn = { id: "a1", name: "Old Armor", slot: "body" };
+    const p = checkoutPatch({ zeni: 100, items: [worn], equipment: { body: "a1" } },
+      [{ item: shield, price: 10, qty: 3 }, { item: gi, price: 5, qty: 1 }]);
+    expect(p.equipment.body).toBe("a1");
+    expect(p.items.find(i => i.id === p.equipment.hand1).name).toBe("Shield");
+    expect(p.items.find(i => i.id === p.equipment.hand2).name).toBe("Shield");
+    expect(p._equipped).toEqual(["Shield", "Shield"]);
+  });
   it("refuses a cart the buyer can't pay for", () => {
     expect(checkoutPatch({ zeni: 499 }, cart)).toBeNull();
     expect(checkoutPatch({ zeni: 900 }, [])).toBeNull();

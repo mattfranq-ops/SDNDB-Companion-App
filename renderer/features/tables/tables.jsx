@@ -3,6 +3,7 @@ import { ClipboardList, Dices, Download, Plus, Table2, Trash2, Upload, X } from 
 import { BOOK_TABLES, BOUNTY_TIERS, DOWNTIME_ACTIVITIES, GAMBLING_GAMES, MAX_TRAINING_BOONS_PER_RANK, TRAINING_ARC_STYLES, TRAINING_BOON_SPENDS } from "../../data/book-tables.js";
 import { NPC_POOLS } from "../../data/name-pools.js";
 import { pick, roll, uid } from "../../lib/dice.js";
+import { ORACLE_ODDS, askOracle } from "../../engine/table-tools.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, EmptyState, ErrorBanner, Field, LoadingBlock, ScannerHeader, Tag, TextInput, downloadJSON } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
@@ -297,6 +298,34 @@ function BountyHuntingTab() {
 }
 
 
+// Yes/no oracle for questions nobody planned for ("Is the shop still open?").
+function OracleCard() {
+  const [question, setQuestion] = useState("");
+  const [odds, setOdds] = useState("even");
+  const [result, setResult] = useState(null);
+  const color = result ? (result.yes ? COLORS.green : COLORS.red) : COLORS.gold;
+  return (
+    <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
+      <div style={{ fontWeight: 700, marginBottom: 2 }}>Oracle</div>
+      <div style={{ color: COLORS.dim, fontSize: 11.5, marginBottom: 10 }}>Ask a yes/no question, pick how likely "yes" is, and roll d100.</div>
+      <TextInput value={question} onChange={e => setQuestion(e.target.value)} placeholder="Is anyone guarding the ship?" style={{ marginBottom: 10 }} />
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {ORACLE_ODDS.map(o => (
+          <button key={o.key} onClick={() => setOdds(o.key)} style={{ cursor: "pointer", fontSize: 12, fontWeight: 600, borderRadius: 16, padding: "5px 12px", background: odds === o.key ? `${COLORS.gold}22` : COLORS.panel2, color: odds === o.key ? COLORS.gold : COLORS.muted, border: `1px solid ${odds === o.key ? COLORS.gold : COLORS.border}` }}>{o.label}</button>
+        ))}
+      </div>
+      <Btn variant="gold" size="sm" onClick={() => setResult({ ...askOracle(odds), question: question.trim() })}><Dices size={13}/> Ask</Btn>
+      {result && (
+        <div style={{ background: COLORS.panel2, border: `1px solid ${color}55`, borderRadius: 8, padding: 10, marginTop: 10 }}>
+          {result.question && <div style={{ fontSize: 12, color: COLORS.muted, marginBottom: 4 }}>{result.question}</div>}
+          <div style={{ fontSize: 16, fontWeight: 800, color }}>{result.answer}</div>
+          <div style={{ fontSize: 11, color: COLORS.dim, fontFamily: FONTS.mono }}>d100 {result.d100} against {result.chance}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TablesScreen({ onBack }) {
   const [sub, setSub] = useState("book");
   return (
@@ -313,6 +342,7 @@ function TablesScreen({ onBack }) {
       {sub === "bounty" && <BountyHuntingTab />}
       {sub === "gm" && (
         <>
+          <OracleCard />
           <NameTableCard />
           <FlavorTableCard title="Homeworld / Planet Flavor" pool={NPC_POOLS.planet} />
           <FlavorTableCard title="NPC Role / Archetype" pool={NPC_POOLS.role} />
@@ -327,6 +357,7 @@ function TablesScreen({ onBack }) {
 export {
   BookTableCard,
   NameTableCard,
+  OracleCard,
   FlavorTableCard,
   blankCustomTable,
   CustomTablesTab,

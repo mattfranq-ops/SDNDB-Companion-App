@@ -74,6 +74,13 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   spell attacks automatically.
 - **Store cart:** add several items (or several of one) to a cart in the Store or Night Market
   and buy them all at once, with one Zeni deduction and a running "keeps / short by" total.
+- **Clocks** (Session → Clocks): a pool of dice counting down to an event. Roll it when its
+  trigger happens; dice showing 1 (or 1–2, 1–3) are lost, or tap a die to remove it. The
+  event lands in the activity feed when the last die goes.
+- **Oracle** (Compendium → Tables → GM Toolkit): ask a yes/no question, pick how likely, roll
+  d100 for Yes, No, "Yes, and…" or "No, and…".
+- Store checkout puts bought gear straight into an empty slot that fits it.
+- The tracker shows whose turn it is and who's up next.
 - **Map pins:** drop named pins on the battle map with a note shown on hover, drag them around,
   and (in DM view) hide a pin from players until they find it.
 
