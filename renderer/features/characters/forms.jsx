@@ -6,68 +6,10 @@ import { AURA_SWATCHES } from "../../engine/spellcasting.js";
 import { uid } from "../../lib/dice.js";
 import { Btn, TextArea, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
+import { BookFormCard, BookFormPicker } from "./forms-book.jsx";
 
 const blankForm = () => ({ id: uid(), name: "New Form", formType: "Transformation", powerBonus: 1, bulk: "", upkeepCost: 0, multiplier: "", awakenLimit: "", giga: 0, description: "", active: false, auraColor: "", modifications: [] });
 
-// Signature Forms available by race, so a Saiyan can pull Super Saiyan without
-// hand-typing it. Names + requirements are book-accurate (Master Doc Ch.6 "Forms"
-// — Form Family List); Power Bonus / Upkeep are LEFT BLANK for the user to fill
-// from the book (values not guessed). Biology forms are species-gated; General
-// and Restricted forms are available to anyone (Restricted are DM-gated).
-const FORM_CATALOG = {
-  species: {
-    Saiyan: [
-      { name: "Great Ape", formType: "Biology · Great Ape Family", req: "an intact Saiyan tail", auraColor: "#8B5E3C" },
-      { name: "Super Saiyan", formType: "Biology · Super Saiyan", req: "Level 5+", auraColor: "#F5C542", mods: ["Super Saiyan grade (see Form-Specific Modifications)"] },
-    ],
-    Arcosian: [
-      { name: "Power Regression", formType: "Biology · Metamorphosis", req: "Arcosian — suppressed base form", auraColor: "#B44BE0" },
-      { name: "Metamorphosis", formType: "Biology · Metamorphosis", req: "Arcosian", auraColor: "#E0555A" },
-    ],
-  },
-  general: ["Full Power", "Energy Release", "Divine Might", "Dark Energy", "God Ki Released", "No-Ego", "Pure Progress"],
-  restricted: ["Kaio-Ken", "Ultra Instinct", "Ultra Ego", "Unleashed Power", "Creation Power", "Four Witches Technique", "Heroic Resolve", "Positions of Power"],
-};
-function formFromCatalog(entry, group) {
-  const e = typeof entry === "string" ? { name: entry } : entry;
-  return {
-    ...blankForm(),
-    name: e.name,
-    formType: e.formType || (group === "restricted" ? "Restricted Form" : group === "general" ? "General Form" : "Biology Form"),
-    powerBonus: 0, upkeepCost: 0, auraColor: e.auraColor || "",
-    description: [e.req ? `Requirement: ${e.req}.` : "", "Set Power Bonus / Ki Upkeep from the book (Ch.6 Forms)."].filter(Boolean).join(" "),
-    modifications: (e.mods || []).map(m => ({ ...blankFormMod(), name: m })),
-  };
-}
-
-// "Available Forms — tap to add" — shown in both the editable and play Forms
-// surfaces so a fighter can pull their race's signature Forms without typing.
-function AvailableFormsRow({ char, forms, set }) {
-  const has = (name) => forms.some(f => (f.name || "").toLowerCase() === name.toLowerCase());
-  const level = charTotalLevel(char);
-  // Only the fighter's OWN race unlocks Forms here, and each surfaces only once its
-  // level requirement is met — signature transformations become available as the
-  // player progresses, not the whole cross-species catalog at once. (General /
-  // Restricted Forms are DM calls — add those as customs below.)
-  const reqLevel = (req) => { const m = /level\s+(\d+)/i.exec(req || ""); return m ? +m[1] : 0; };
-  const speciesForms = Object.entries(FORM_CATALOG.species)
-    .filter(([sp]) => (char.species || "").toLowerCase().includes(sp.toLowerCase()))
-    .flatMap(([, list]) => list)
-    .filter(e => level >= reqLevel(e.req) && !has(e.name));
-  if (speciesForms.length === 0) return null;
-  const addCat = (entry) => set({ forms: [...forms, formFromCatalog(entry, "species")] });
-  return (
-    <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 12, marginBottom: 12 }}>
-      <div style={{ fontSize: 11, color: COLORS.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Available Forms — {char.species || "your race"}</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-        {speciesForms.map((e, i) => (
-          <span key={i} onClick={() => addCat(e)} title={e.req ? `Requirement: ${e.req}` : "Add this Form"} style={{ cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 14, padding: "3px 10px", background: `${COLORS.gold}18`, color: COLORS.gold, border: `1px solid ${COLORS.gold}55` }}>+ {e.name}{e.req ? <span style={{ color: COLORS.dim, fontWeight: 400, marginLeft: 5 }}>· {e.req}</span> : null}</span>
-        ))}
-      </div>
-      <div style={{ fontSize: 9.5, color: COLORS.dim, marginTop: 8 }}>Set each Form's Power Bonus / Ki Upkeep from the book (Ch.6 Forms) after adding.</div>
-    </div>
-  );
-}
 const blankFormMod = () => ({ id: uid(), name: "New Modification", powerBonus: 0, upkeepIncrease: 0, multiplier: "", description: "", active: false });
 
 function ConditionCard({ cond, active, onToggle }) {
@@ -176,10 +118,10 @@ function FormsPlayTab({ char, set }) {
         </div>
       </div>
       {forms.length === 0 ? (
-        <div style={{ color: COLORS.dim, fontSize: 12.5 }}>No Forms yet — add signature forms and customs in the <span style={{ color: COLORS.gold }}>Growth</span> tab; they show here to run in play.</div>
+        <div style={{ color: COLORS.dim, fontSize: 12.5 }}>No Forms yet. Add forms from the book or your own in the <span style={{ color: COLORS.gold }}>Growth</span> tab; they show here to run in play.</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
-          {forms.map((f, i) => (
+          {forms.map((f, i) => f.bookId ? <BookFormCard key={f.id} char={char} form={f} set={set} /> : (
             <div key={f.id} style={{ background: COLORS.panel2, border: `1px solid ${f.active ? COLORS.gold : COLORS.border}`, borderRadius: 8, padding: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <button onClick={() => toggle(i)} title="Toggle active" style={{ background: f.active ? COLORS.gold : "transparent", border: `1px solid ${f.active ? COLORS.gold : COLORS.dim}`, borderRadius: 20, color: f.active ? "#0A0C11" : COLORS.muted, fontSize: 10, fontWeight: 700, padding: "3px 9px", cursor: "pointer" }}>{f.active ? "ACTIVE" : "off"}</button>
@@ -237,11 +179,11 @@ function FormsTab({ char, set }) {
           <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.blue }}>{activeUpkeep}</div>
         </div>
       </div>
-      <div style={{ fontSize: 10.5, color: COLORS.dim, marginBottom: 12 }}>Toggle a Form active to fold its Power Bonus into your Overload / Battle Power and its Ki Upkeep into the per-turn cost above.</div>
+      <div style={{ fontSize: 10.5, color: COLORS.dim, marginBottom: 12 }}>Forms from the book use their printed Power, Upkeep and Awaken Limit and scale with your Ki Rank. Awaken one to start it (you need more Ki than its Awaken Limit); the tracker takes its Upkeep each turn.</div>
 
       {forms.length === 0 && <div style={{ color: COLORS.dim, fontSize: 12.5, marginBottom: 12 }}>No Forms yet. Add one to track transformations, their multipliers, and modifications.</div>}
 
-      {forms.map((f, i) => (
+      {forms.map((f, i) => f.bookId ? <div key={f.id} style={{ marginBottom: 10 }}><BookFormCard char={char} form={f} set={set} onRemove={() => removeForm(i)} /></div> : (
         <div key={f.id} style={{ background: COLORS.panel2, border: `1px solid ${f.active ? COLORS.gold : COLORS.border}`, borderRadius: 8, padding: 12, marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <button onClick={() => updateForm(i, { active: !f.active })} title="Toggle active" style={{ background: f.active ? COLORS.gold : "transparent", border: `1px solid ${f.active ? COLORS.gold : COLORS.dim}`, borderRadius: 20, color: f.active ? "#0A0C11" : COLORS.muted, fontSize: 10.5, fontWeight: 700, padding: "3px 10px", cursor: "pointer" }}>{f.active ? "ACTIVE" : "inactive"}</button>
@@ -285,9 +227,9 @@ function FormsTab({ char, set }) {
         </div>
       ))}
 
-      <AvailableFormsRow char={char} forms={forms} set={set} />
+      <BookFormPicker char={char} forms={forms} set={set} />
 
-      <Btn variant="gold" onClick={addForm}><Plus size={13}/> Add Form</Btn>
+      <Btn variant="gold" onClick={addForm}><Plus size={13}/> Add your own Form</Btn>
     </div>
   );
 }
@@ -298,9 +240,6 @@ function techResColor(res) {
 
 export {
   blankForm,
-  FORM_CATALOG,
-  formFromCatalog,
-  AvailableFormsRow,
   blankFormMod,
   ConditionCard,
   ConditionsPanel,

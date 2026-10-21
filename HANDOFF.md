@@ -45,9 +45,14 @@ Two reports in the project's shared files say what's left:
   start-of-turn effects; pass 3 is the sheet (backstory, technique charges, table backup).
 - `sdnd/5.0-feature-gaps.md` lists the 5.0 book content that's missing or wrong. The class
   tables are done: `data/class-data.js` was regenerated from the book (tables, feature text and
-  options, saves, proficiencies, table columns), and `test/classes.test.js` checks it. Next in
-  that report: forms with real stats and Ascend / Ramp Up, the species stubs, heritages and
-  Biology feats, then gear.
+  options, saves, proficiencies, table columns), and `test/classes.test.js` checks it. Forms
+  are done too: `data/form-data.js` holds all 56 Ch.6 forms and 58 Form Modifications with the
+  book's formulas, `engine/forms.js` evaluates them (Power, Upkeep, Awaken Limit, Ascend cost,
+  slots and families, Ramp Up), and `test/forms.test.js` checks it. Next in that report: the
+  species stubs, heritages and Biology feats, then gear.
+- Every gap found against the Cyberpunk RED Companion is closed (encounters, clocks, oracle,
+  cart, map pins, saved roll modifiers). `engine/encounters.js` and `engine/table-tools.js`
+  hold their rules.
 
 ## Tips for whoever picks this up
 

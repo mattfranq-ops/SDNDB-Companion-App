@@ -1,10 +1,11 @@
 import React from "react";
 import { Home as HomeIcon } from "lucide-react";
-import { CONDITIONS_DATA, activeForms, benefitsOfPower, charClasses, charTotalLevel, computeKiRank, effectivePowerBonus, effectiveStats, profBonusForLevel, statMod } from "../../engine/core.js";
+import { CONDITIONS_DATA, activeForms, benefitsOfPower, formCtx, charClasses, charTotalLevel, computeKiRank, effectivePowerBonus, effectiveStats, profBonusForLevel, statMod } from "../../engine/core.js";
 import { cyberneticKiControlPenalty, cyberneticLimit, cyberneticsUsed, installedParts } from "../../engine/cybernetics.js";
 import { computeAttacksPerTurn, computeCarryWeight, computeOverload, computePassives, computePowerLevel, computeTechRefs, powerDR } from "../../engine/derived.js";
 import { computeAC, computeArmorDR, computeWeighted, equippedEntries } from "../../engine/equipment.js";
 import { totalDR } from "../../engine/damage.js";
+import { formPower, formUpkeep } from "../../engine/forms.js";
 import { SKILL_LIST, STAT_KEYS, computeSaveBonus, computeSkillBonus } from "../../engine/skills.js";
 import { activeAura, isCaster, spellStats } from "../../engine/spellcasting.js";
 import { gravAcclimRanks, gravityColor } from "../../engine/universe.js";
@@ -166,7 +167,7 @@ function ScouterSheet({ char }) {
             {forms.map(f => (
               <div key={f.id} style={{ fontSize: 11.5, marginBottom: 3 }}>
                 <span style={{ color: COLORS.gold, fontWeight: 700 }}>{f.name}</span>
-                <span style={{ color: COLORS.dim }}> · +{f.powerBonus || 0} pwr{f.multiplier ? ` · ×${f.multiplier}` : ""}{f.upkeepCost ? ` · ${f.upkeepCost} Ki upkeep` : ""}</span>
+                <span style={{ color: COLORS.dim }}> · +{formPower(f, formCtx(char))} pwr{f.multiplier ? ` · ×${f.multiplier}` : ""}{formUpkeep(f, formCtx(char)) ? ` · ${formUpkeep(f, formCtx(char))} Ki upkeep` : ""}</span>
               </div>
             ))}
           </div>

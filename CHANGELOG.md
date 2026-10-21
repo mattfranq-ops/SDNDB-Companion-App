@@ -63,6 +63,24 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   Elite Critical Technique is no longer a limited pool in 5.0, so it's gone.
 - Superiority Dice regain Ki Rank dice at the start of the turn, not the whole pool.
 
+**Forms from the 5.0 book** (Ch.6, pp. 201–248)
+- All 56 Forms and 58 Form Modifications with their rules text, Power, Awaken Limit, Upkeep and
+  Cost to Ascend. Pick them in Growth → Forms: your species' Biology forms show first, with
+  General and Restricted forms below and a search across every species.
+- Book forms scale as you level: Combat Mode's Power is your Ki Rank and its Upkeep 3 × Ki Rank,
+  Super Saiyan Full Power's Upkeep is 5 × (2 + Ki Rank), and so on.
+- **Awaken** a form from the Forms tab: it needs more current Ki than the Awaken Limit and pays
+  the Upkeep to start. God Forms **Ascend** instead and pay their Stamina cost. The book's limits
+  hold: one Transformation and one Power-Up at a time, and never two forms from one Family.
+- **Ramp Up** adds a Form Modification to an active form (Super Saiyan Grade 2, Kaio-Ken x20!,
+  Super Saiyan 3…), checks its Awaken Limit, and swapping one for another pays only the
+  difference in Upkeep.
+- Variable Form Upkeep forms (Overclock, Full Power, Pure Progress…) let you choose how much Ki to
+  put in, and their Power follows it up to the book's cap. Stable Power from forms stays out of
+  Overload, and Super Saiyan Grade 4 makes the whole form's Power stable.
+- Kaio-Ken's Hit Point Upkeep comes off HP at the start of the turn.
+- Forms you made by hand keep working exactly as before.
+
 **Table tools** (the last gaps found against the Cyberpunk RED Companion)
 - **Roll Encounter** in the Session tracker rolls a fight from the Roster of FighterZ sized to
   the party (players, average level, Easy to Deadly, any saga). Hard and Deadly fights get an

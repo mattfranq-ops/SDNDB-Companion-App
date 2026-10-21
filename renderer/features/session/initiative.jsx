@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Check, ChevronRight, Crosshair, Dices, Eye, EyeOff, HeartPulse, Plus, Radio, RotateCcw, Skull, Sparkles, Swords, Trash2, Users, Wand2, X } from "lucide-react";
 import { useLocalOption } from "../../state/local-options.js";
 import { deviceId, emitNav, emitRoll, logSession, rollsPrivate, setRollsPrivate } from "../../app/bus.js";
-import { abilityMod, activeFormUpkeep, charTotalLevel, computeKiRank, effectivePowerBonus, statMod } from "../../engine/core.js";
+import { abilityMod, activeFormHpUpkeep, activeFormUpkeep, charTotalLevel, computeKiRank, effectivePowerBonus, statMod } from "../../engine/core.js";
 import { HEALTH_LABEL, damagePatch, deathSave, grantTempPatch, healthState, overloadDamage, spendPatch, totalDR } from "../../engine/damage.js";
 import { CONDITION_GROUPS, CONDITION_LIBRARY, defaultRounds, findCondition, kiFluxResult } from "../../engine/conditions.js";
 import { computeSaveBonus } from "../../engine/skills.js";
@@ -248,6 +248,13 @@ function InitiativeTab() {
           const paid = spendPatch(cur, "ki", upkeep);
           merge(paid || { ki: 0, temp: { ...(cur.temp || { hp: 0, ki: 0, stamina: 0 }), ki: 0 } });
           notes.push(paid ? `−${upkeep} Ki upkeep` : `couldn't cover ${upkeep} Ki upkeep`);
+        }
+        // Hit Point Upkeep (Kaio-Ken) comes straight off HP.
+        let hpUp = 0;
+        try { hpUp = activeFormHpUpkeep(src) || 0; } catch { /* no forms */ }
+        if (hpUp > 0) {
+          merge({ hp: Math.max(0, (cur.hp || 0) - hpUp) });
+          notes.push(`−${hpUp} HP upkeep`);
         }
         // Overload: Destruction Damage, then a Wisdom save (DC 10 + Power) or Dazed.
         let ov = null;

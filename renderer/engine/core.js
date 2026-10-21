@@ -1,5 +1,6 @@
 import { equippedEntries, weightedPower } from "./equipment.js";
 import { STAT_KEYS } from "./skills.js";
+import { formHpUpkeep, formPower, formStablePower, formUpkeep } from "./forms.js";
 
 // Hit die per class, from each class's "Hit Dice — 1dN per <class> level" block
 // (SDNDB Master Doc Ch.4). Drives book-correct starting HP in the quick builders.
@@ -107,10 +108,11 @@ const totalPowerBonus = (char) => {
 // Forms — active forms (and their active modifications) add Power Bonus and Ki
 // Upkeep on top of the manually-entered powerBonus fields.
 const activeForms = (char) => (char.forms || []).filter(f => f && f.active);
-const activeFormPower = (char) => activeForms(char).reduce((sum, f) =>
-  sum + (f.powerBonus || 0) + (f.modifications || []).filter(m => m.active).reduce((s, m) => s + (m.powerBonus || 0), 0), 0);
-const activeFormUpkeep = (char) => activeForms(char).reduce((sum, f) =>
-  sum + (f.upkeepCost || 0) + (f.modifications || []).filter(m => m.active).reduce((s, m) => s + (m.upkeepIncrease || 0), 0), 0);
+// Book forms scale with Ki Rank and Proficiency, so they read both (engine/forms.js).
+const formCtx = (char) => ({ kiRank: computeKiRank(char), prof: profBonusForLevel(charTotalLevel(char)) });
+const activeFormPower = (char) => activeForms(char).reduce((sum, f) => sum + formPower(f, formCtx(char)), 0);
+const activeFormUpkeep = (char) => activeForms(char).reduce((sum, f) => sum + formUpkeep(f, formCtx(char)), 0);
+const activeFormHpUpkeep = (char) => activeForms(char).reduce((sum, f) => sum + formHpUpkeep(f, formCtx(char)), 0);
 // Special Conditions (book Ch.1) — toggleable states. A couple grant flat Power
 // that folds into the engine like Forms; the rest are tracked + documented.
 const CONDITIONS_DATA = [
@@ -133,6 +135,7 @@ const effectivePowerBonus = (char) => totalPowerBonus(char) + activeFormPower(ch
 // of effectivePowerBonus; computeOverload subtracts it back out.
 const stablePower = (char) =>
   (char.powerBonus?.stable || 0) +
+  activeForms(char).reduce((sum, f) => sum + formStablePower(f, formCtx(char)), 0) +
   CONDITIONS_DATA.reduce((sum, c) => sum + ((char.activeConditions || {})[c.id] && c.stable ? c.power : 0), 0);
 
 // Benefits of Power (book Ch.1) — as Current Power Bonus crosses thresholds you
@@ -173,6 +176,8 @@ export {
   activeForms,
   activeFormPower,
   activeFormUpkeep,
+  activeFormHpUpkeep,
+  formCtx,
   CONDITIONS_DATA,
   activeConditionPower,
   effectivePowerBonus,
