@@ -71,9 +71,9 @@ function setTheme(id) {
 
 const FEAT_LIST_COLOR = {
   "Epic Boon": "gold", "Fighting Style": "blue", "General": "dim", "Heroic": "purple",
-  "Stance": "green", "Trained": "red", "Origin": "amber", "Custom": "muted",
+  "Stance": "green", "Trained": "red", "Origin": "amber", "Biology": "green", "Custom": "muted",
 };
-const FEAT_LISTS = ["Epic Boon", "Fighting Style", "General", "Heroic", "Stance", "Trained", "Origin"];
+const FEAT_LISTS = ["Epic Boon", "Fighting Style", "General", "Heroic", "Stance", "Trained", "Origin", "Biology"];
 
 export {
   THEMES,

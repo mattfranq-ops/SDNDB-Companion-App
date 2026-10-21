@@ -385,8 +385,12 @@ function FeatsPickerTab({ char, set }) {
   // more than once, so picks are stored as instances keyed by uid.
   const isRepeatable = (f) => /repeatable/i.test(f.fullText || "");
   const isASI = (f) => f.id === "book_32" || /^ability score improvement$/i.test(f.name || "");
+  // Biology Feats belong to a Species or Heritage; only yours show unless you
+  // search or pick the Biology list.
+  const mine = [char.species, char.heritage].filter(Boolean).map(s => s.toLowerCase());
   const results = allFeats.filter(f => {
     if (listFilter !== "all" && f.list !== listFilter) return false;
+    if (f.list === "Biology" && !query && listFilter !== "Biology" && !mine.includes((f.subcategory || "").toLowerCase())) return false;
     if (!query) return true;
     const q = query.toLowerCase();
     return f.name.toLowerCase().includes(q) || f.fullText.toLowerCase().includes(q);
@@ -461,8 +465,9 @@ function FeatsPickerTab({ char, set }) {
           const color = COLORS[FEAT_LIST_COLOR[f.list]] || COLORS.muted;
           return (
             <div key={f.id} onClick={() => !already && addFeat(f)} title={f.fullText} style={{ cursor: already ? "default" : "pointer", opacity: already ? 0.45 : 1, background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 10 }}>
-              <Tag color={color}>{f.list}</Tag>
+              <Tag color={color}>{f.list === "Biology" && f.subcategory ? `${f.subcategory}` : f.list}</Tag>
               <div style={{ fontWeight: 700, fontSize: 12.5, marginTop: 4 }}>{f.name}</div>
+              {f.prerequisite && f.list === "Biology" && <div style={{ fontSize: 10, color: COLORS.dim, marginTop: 2 }}>{f.prerequisite}</div>}
               <div style={{ fontSize: 10, marginTop: 2, color: already ? COLORS.green : COLORS.blue }}>{already ? "✓ Known" : againCount ? `+ Add again (×${againCount})` : "+ Add"}</div>
             </div>
           );

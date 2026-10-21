@@ -75,6 +75,8 @@ Everything from 1.13.2 still works the same way, and existing tables load unchan
   Saiyan) are set for you. The Features tab shows what you have, swapped-out features struck through.
 - Heritage Biology forms (Speedster, Prehistoric Blood, S-Cell Overload) show in the form picker
   once you have the Heritage.
+- All 80 Biology Feats (Ch.7, pp. 252–264) join the feat list with their prerequisites. The feat
+  picker offers the ones for your Species and Heritage; search or pick the Biology list to see the rest.
 
 **Forms from the 5.0 book** (Ch.6, pp. 201–248)
 - All 56 Forms and 58 Form Modifications with their rules text, Power, Awaken Limit, Upkeep and

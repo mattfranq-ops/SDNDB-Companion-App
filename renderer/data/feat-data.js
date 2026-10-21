@@ -1,6 +1,9 @@
 // Auto-generated from SD&DBZ Master Doc, Chapter 7 (Epic Boon / Fighting Style / General / Heroic / Stance / Trained / Origin Feat Lists).
 // Regenerate by re-running the extraction pipeline, do not hand-edit.
-export const FEAT_DATA = [
+// Biology Feats live in biology-feat-data.js and are appended at the end.
+import { BIOLOGY_FEAT_DATA } from "./biology-feat-data.js";
+
+const BOOK_FEATS = [
   {
     "name": "Boon of Boundless Energy",
     "list": "Epic Boon",
@@ -2045,3 +2048,5 @@ export const FEAT_DATA = [
     "custom": false
   }
 ];
+
+export const FEAT_DATA = [...BOOK_FEATS, ...BIOLOGY_FEAT_DATA];

@@ -62,3 +62,22 @@ describe("heritages", () => {
     expect(f.chosen.text).toMatch(/Saibaman Seed/);
   });
 });
+
+describe("Biology feats", async () => {
+  const { FEAT_DATA } = await import("../renderer/data/feat-data.js");
+  const bio = FEAT_DATA.filter(f => f.list === "Biology");
+  it("adds the book's 80 Biology Feats with prerequisites and text", () => {
+    expect(bio).toHaveLength(80);
+    expect(new Set(FEAT_DATA.map(f => f.id)).size).toBe(FEAT_DATA.length);
+    for (const f of bio) {
+      expect(f.prerequisite, f.name).toBeTruthy();
+      expect(f.fullText.length, f.name).toBeGreaterThan(40);
+    }
+    const subs = new Set(bio.map(f => f.subcategory));
+    for (const s of subs) expect(speciesFor(s) || heritageByName(s), s).toBeTruthy();
+  });
+  it("reads a feat's prerequisites", () => {
+    const f = bio.find(x => x.name === "Robotic Body: Combat Mode");
+    expect([f.subcategory, f.prerequisite]).toEqual(["Android", "Robotic Body Species Feature, Ki Rank 2"]);
+  });
+});
