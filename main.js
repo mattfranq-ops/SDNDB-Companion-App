@@ -50,7 +50,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
-    ipcMain.handle("lanhost:start", (e, port) => server.start(port, worldsDir()));
+    ipcMain.handle("lanhost:start", (e, port) => server.start(port, worldsDir(), path.join(__dirname, "dist")));
     ipcMain.handle("lanhost:stop", () => server.stop());
     ipcMain.handle("lanhost:status", () => server.status());
     ipcMain.handle("lanhost:ips", () => server.localIps());

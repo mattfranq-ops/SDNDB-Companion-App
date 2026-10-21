@@ -99,3 +99,28 @@ describe("table server", () => {
     expect(fs.readdirSync(dir).some((f) => f.startsWith("BROKEN.json.corrupt-"))).toBe(true);
   });
 });
+
+// Phones open the host's address in a browser, so the server also hands out the app.
+describe("serving the app", () => {
+  const web = fs.mkdtempSync(path.join(os.tmpdir(), "sdndbz-web-"));
+  fs.writeFileSync(path.join(web, "index.html"), "<!doctype html><title>app</title>");
+  fs.writeFileSync(path.join(web, "manifest.webmanifest"), "{}");
+
+  it("serves index.html at / and other files with their types", async () => {
+    server.stop(); await settle();
+    await server.start(PORT, dir, web);
+    const page = await fetch(`${base}/`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toMatch(/text\/html/);
+    expect(await page.text()).toContain("<title>app</title>");
+    const man = await fetch(`${base}/manifest.webmanifest`);
+    expect(man.headers.get("content-type")).toBe("application/manifest+json");
+  });
+  it("never serves files outside the app folder", async () => {
+    expect((await fetch(`${base}/..%2fserver.js`)).status).toBe(404);
+    expect((await fetch(`${base}/%2e%2e/%2e%2e/etc/hosts`)).status).toBe(404);
+  });
+  it("still answers the API alongside the app", async () => {
+    expect((await fetch(`${base}/ping`)).status).toBe(200);
+  });
+});

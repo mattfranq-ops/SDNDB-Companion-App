@@ -48,6 +48,23 @@ export default function ConnectGate({ children }) {
   });
   const [joinWorld, setJoinWorld] = useState(window.storage.getWorld());
 
+  // Opened from the host's own address (a phone's browser, or the installed
+  // home-screen app)? Then the server is this page's origin and players only
+  // need the table name. ?table=NAME in the link fills that in too.
+  const [sameOrigin, setSameOrigin] = useState(null); // origin string once confirmed
+  const [editServer, setEditServer] = useState(false);
+  useEffect(() => {
+    if (hasHost || !/^https?:$/.test(location.protocol)) return;
+    let alive = true;
+    fetch("/ping").then(r => r.json()).then(j => {
+      if (!alive || !j || j.app !== "sdndbz-companion") return;
+      setSameOrigin(location.origin);
+      const t = new URLSearchParams(location.search).get("table");
+      if (t) setJoinWorld(t);
+    }).catch(() => { /* a plain web host, not the table server */ });
+    return () => { alive = false; };
+  }, []);
+
   // Host fields
   const [hostPort, setHostPort] = useState(DEFAULT_PORT);
   const [hostWorld, setHostWorld] = useState(window.storage.getWorld());
@@ -71,13 +88,14 @@ export default function ConnectGate({ children }) {
 
   if (ready) return children;
 
+  const useOrigin = !!sameOrigin && !editServer;
   const doJoin = async () => {
     setError("");
-    if (!addr.trim()) return setError("Enter the host's address.");
+    if (!useOrigin && !addr.trim()) return setError("Enter the host's address.");
     if (!joinWorld.trim()) return setError("Enter a table name.");
     setBusy(true);
     try {
-      window.storage.setServer(buildBase(addr, joinPort));
+      window.storage.setServer(useOrigin ? sameOrigin : buildBase(addr, joinPort));
       window.storage.setWorld(joinWorld);
       await window.storage.connect();
       setReady(true);
@@ -178,7 +196,22 @@ export default function ConnectGate({ children }) {
           )
         )}
 
-        {mode === "join" && (
+        {mode === "join" && useOrigin && (
+          <>
+            <div style={{ color: COLORS.muted, fontSize: 12.5, marginBottom: 14, lineHeight: 1.5 }}>
+              Connected to the host at <b style={{ color: COLORS.text, fontFamily: FONTS.mono }}>{sameOrigin.replace(/^https?:\/\//, "")}</b>.
+            </div>
+            <div style={labelStyle()}>TABLE NAME</div>
+            <input style={inputStyle()} value={joinWorld} autoFocus aria-label="Table name" autoCapitalize="characters" autoCorrect="off"
+              onChange={(e) => setJoinWorld(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doJoin()}
+              placeholder="e.g. FRIEZA-CREW" />
+            <button onClick={doJoin} disabled={busy} style={actionBtn(COLORS.blue)}>{busy ? "Connecting…" : "Join table"}</button>
+            <button onClick={() => setEditServer(true)} style={{ marginTop: 12, background: "none", border: "none", color: COLORS.dim, fontSize: 11.5, cursor: "pointer", textDecoration: "underline" }}>Use a different host</button>
+          </>
+        )}
+
+        {mode === "join" && !useOrigin && (
           <>
             <div style={labelStyle()}>HOST ADDRESS</div>
             <input style={inputStyle()} value={addr} autoFocus aria-label="Host address"

@@ -117,7 +117,7 @@ function KnownTechniquesTab({ char, set }) {
   /* ---- Known list ---- */
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
         <Btn variant="gold" onClick={() => setMode("pick")}><Plus size={13}/> Add from Book</Btn>
         <Btn onClick={() => { setDraft(blankCustomTech()); setMode("custom"); }}><Sparkles size={13}/> Create Custom</Btn>
         {(() => {

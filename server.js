@@ -16,6 +16,9 @@ const path = require("path");
 let server = null;
 let listenPort = 0;
 let worldsDir = null;
+// The built app (dist/). Served at / so a phone on the same network or VPN can
+// open http://<host>:<port> in its browser and play without installing anything.
+let webDir = path.join(__dirname, "dist");
 
 const worlds = new Map();   // world -> Map(key -> value string)
 const clients = new Map();  // world -> Set(res)  (open SSE streams)
@@ -230,14 +233,41 @@ async function handle(req, res) {
     }
   }
 
+  if (req.method === "GET" || req.method === "HEAD") { serveStatic(req, res, url.pathname); return; }
+
   sendJson(res, 404, { error: "not found" });
+}
+
+// --- the app itself, for phones and other browsers --------------------------
+
+const MIME = {
+  ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+  ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml",
+  ".png": "image/png", ".ico": "image/x-icon", ".woff": "font/woff", ".woff2": "font/woff2",
+};
+
+function serveStatic(req, res, pathname) {
+  let rel;
+  try { rel = decodeURIComponent(pathname); } catch { sendJson(res, 400, { error: "bad path" }); return; }
+  if (rel === "/" || rel === "") rel = "/index.html";
+  const file = path.resolve(webDir, "." + rel);
+  // Never step outside the app folder.
+  if (file !== webDir && !file.startsWith(webDir + path.sep)) { sendJson(res, 404, { error: "not found" }); return; }
+  fs.readFile(file, (err, data) => {
+    if (err) { sendJson(res, 404, { error: "not found" }); return; }
+    const type = MIME[path.extname(file).toLowerCase()] || "application/octet-stream";
+    // index.html points at versioned bundles, so it must never be cached.
+    res.writeHead(200, { "Content-Type": type, "Cache-Control": rel === "/index.html" ? "no-cache" : "public, max-age=3600" });
+    res.end(req.method === "HEAD" ? undefined : data);
+  });
 }
 
 // --- lifecycle -----------------------------------------------------------
 
-function start(port, dir) {
+function start(port, dir, appDir) {
   if (server) return Promise.resolve(status());
   worldsDir = dir;
+  if (appDir) webDir = path.resolve(appDir);
   listenPort = port || 30000;
   return new Promise((resolve, reject) => {
     server = http.createServer((req, res) => {

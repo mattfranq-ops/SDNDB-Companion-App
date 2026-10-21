@@ -24,6 +24,19 @@ function globalCss() {
     /* No native scrollbars anywhere — scrolling still works by wheel/drag/touch. */
     * { scrollbar-width: none; -ms-overflow-style: none; }
     ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    /* Phones: the initiative row stacks (name + init on top, then each pool and
+       the controls on their own lines) instead of eight columns side by side. */
+    @media (max-width: 700px) {
+      .sd-tracker-row { grid-template-columns: 18px minmax(0,1fr) 56px !important; }
+      .sd-tracker-row > :nth-child(n+4) { grid-column: 1 / -1 !important; }
+      .sd-tracker-row > .sd-tracker-dr { justify-self: start; width: 90px !important; }
+      .sd-tracker-row > .sd-tracker-actions { justify-content: start !important; grid-template-columns: repeat(6, auto) !important; }
+      /* Fixed many-column grids on the sheets fold to fewer columns, and the
+         sidebar + content layouts (Vitals, Inventory) stack. */
+      main [style*="grid-template-columns: repeat(6"] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+      main [style*="grid-template-columns: repeat(4"], main [style*="grid-template-columns: repeat(5"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      main [style*="grid-template-columns: minmax(2"] { grid-template-columns: minmax(0, 1fr) !important; }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
     }

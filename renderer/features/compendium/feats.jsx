@@ -77,7 +77,7 @@ function FeatsTab() {
         </div>
         <Btn variant="gold" onClick={addCustom}><Plus size={13}/> Add Feat</Btn>
       </div>
-      <div style={{ display: "flex", gap: 4, marginBottom: 12, borderBottom: `1px solid ${COLORS.border}` }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 12, borderBottom: `1px solid ${COLORS.border}`, overflowX: "auto", whiteSpace: "nowrap" }}>
         {[["all","All"],["book","Book"],["custom","Custom"]].map(([k,l]) => (
           <button key={k} onClick={() => setSource(k)} style={{ padding: "6px 12px", background: "transparent", border: "none", borderBottom: `2px solid ${source===k?COLORS.gold:"transparent"}`, color: source===k?COLORS.gold:COLORS.muted, fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}>{l} {k==="custom" ? `(${custom.length})` : k==="book" ? `(${FEAT_DATA.length})` : `(${allFeats.length})`}</button>
         ))}

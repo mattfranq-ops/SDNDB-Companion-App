@@ -66,7 +66,7 @@ function AppHeader() {
 
 function BottomNav({ nav, tab, onSelect }) {
   return (
-    <nav aria-label="Sections" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150, background: `${COLORS.panel}F7`, backdropFilter: "blur(8px)", borderTop: `1px solid ${COLORS.border}`, display: "flex" }}>
+    <nav aria-label="Sections" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150, background: `${COLORS.panel}F7`, backdropFilter: "blur(8px)", borderTop: `1px solid ${COLORS.border}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {nav.map((n, i) => {
         const active = tab === n.key;
         return (

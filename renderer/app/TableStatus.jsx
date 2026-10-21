@@ -52,7 +52,7 @@ function CopyLine({ text, sub }) {
   };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: COLORS.input, border: `1px solid ${COLORS.border}`, borderRadius: 4, marginBottom: 6 }}>
-      <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.text, flex: 1 }}>{text}</span>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.text, flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{text}</span>
       {sub && <span style={{ fontSize: 11, color: COLORS.dim }}>{sub}</span>}
       <button onClick={copy} title="Copy" aria-label={`Copy ${text}`} style={{ background: "none", border: "none", cursor: "pointer", color: copied ? COLORS.green : COLORS.muted, display: "flex", padding: 2 }}>
         <Copy size={14} />
@@ -111,6 +111,13 @@ function TableStatus() {
               {host.ips.length === 0 && <div style={{ fontSize: 12, color: COLORS.dim, marginBottom: 6 }}>No network address found. Are you connected to Wi-Fi or a VPN?</div>}
               {host.ips.map(ip => <CopyLine key={ip.address} text={`${ip.address}:${port}`} sub={ip.address.startsWith("25.") ? "Hamachi" : ip.name} />)}
               <div style={{ fontSize: 11.5, color: COLORS.dim, margin: "4px 0 12px" }}>Plus the table name <b style={{ color: COLORS.text }}>{world}</b>. Same Wi-Fi: use the 192.168 / 10. address. Remote players: use your VPN address.</div>
+              {host.ips.length > 0 && (
+                <>
+                  <div style={{ fontSize: 10.5, color: COLORS.blue, letterSpacing: 0.9, fontFamily: FONTS.mono, marginBottom: 6 }}>PHONES AND TABLETS OPEN</div>
+                  {host.ips.map(ip => <CopyLine key={`m-${ip.address}`} text={`http://${ip.address}:${port}/?table=${encodeURIComponent(world)}`} />)}
+                  <div style={{ fontSize: 11.5, color: COLORS.dim, margin: "4px 0 12px" }}>In the phone's browser. Then "Add to Home Screen" to keep it as an app.</div>
+                </>
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: COLORS.muted, marginBottom: 12 }}>
                 <Users size={13} /> {host.status.clients} {host.status.clients === 1 ? "device" : "devices"} connected (including you)
               </div>

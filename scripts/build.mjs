@@ -16,6 +16,8 @@ function writeIndex() {
     .replace("bundle.css", `bundle.css?v=${v}`)
     .replace("bundle.js", `bundle.js?v=${v}`);
   fs.writeFileSync(path.join(dist, "index.html"), html);
+  // Home-screen icons and the web app manifest for phones (renderer/public).
+  fs.cpSync(path.join(root, "renderer", "public"), dist, { recursive: true });
 }
 
 const options = {
@@ -25,7 +27,7 @@ const options = {
   loader: { ".js": "jsx", ".woff2": "file", ".woff": "file" },
   assetNames: "fonts/[name]-[hash]",
   define: { "process.env.NODE_ENV": watch ? '"development"' : '"production"' },
-  target: ["chrome124"],
+  target: ["chrome124", "safari15"],
   sourcemap: watch ? "inline" : false,
   logLevel: "info",
   plugins: [{ name: "index-html", setup(build) { build.onEnd((r) => { if (!r.errors.length) writeIndex(); }); } }],

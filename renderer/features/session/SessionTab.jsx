@@ -15,9 +15,9 @@ function SessionTab() {
   return (
     <div>
       <ScannerHeader title="SESSION" subtitle="Live play state, shared with the table in real time." />
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: `1px solid ${COLORS.border}` }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: `1px solid ${COLORS.border}`, overflowX: "auto", whiteSpace: "nowrap" }}>
         {[["initiative","Initiative"],["rolls","Rolls"],...(houseRules.quickCombat?[["quickcombat","Quick Combat"]]:[]),["clocks","Clocks"],["environment","Environment"],["time","Calendar"],["details","Session Details"]].map(([k,l]) => (
-          <button key={k} onClick={() => setSub(k)} style={{ padding: "8px 14px", background: "transparent", border: "none", borderBottom: `2px solid ${sub===k?COLORS.gold:"transparent"}`, color: sub===k?COLORS.gold:COLORS.muted, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{l}</button>
+          <button key={k} onClick={() => setSub(k)} style={{ padding: "8px 14px", background: "transparent", border: "none", borderBottom: `2px solid ${sub===k?COLORS.gold:"transparent"}`, color: sub===k?COLORS.gold:COLORS.muted, fontWeight: 600, fontSize: 13.5, cursor: "pointer", flexShrink: 0 }}>{l}</button>
         ))}
       </div>
       {sub === "initiative" && <InitiativeTab />}

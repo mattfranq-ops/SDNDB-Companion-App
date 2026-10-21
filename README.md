@@ -20,6 +20,18 @@ no cloud service and no account.
 - The host keeps the app open while you play. The table panel at the top right shows the
   addresses to give players, who is connected, and the Stop hosting button.
 
+### Phones and tablets
+
+Players don't need to install anything on a phone. While the host is hosting, the table server
+also serves the app itself, so a phone opens `http://<host address>:<port>/?table=<TABLE>` in
+its browser and only has to tap Join. The host's table panel lists these links. From the phone
+browser's menu, "Add to Home Screen" keeps it as an app with its own icon.
+
+- Same Wi-Fi: use the host's `192.168` / `10.` link.
+- Away from home: Hamachi has no phone app, so phones can't reach a `25.` address. Join the
+  host's computer and the phones to a free ZeroTier network (it runs fine next to Hamachi) and
+  use the host's ZeroTier address in the link.
+
 Player-facing instructions live in [HOW_TO_HOST_AND_JOIN.txt](HOW_TO_HOST_AND_JOIN.txt).
 Worlds are saved in the host's app data folder (`%APPDATA%\SDNDBZ Companion\worlds` on
 Windows), one JSON file per table name, with a rolling `.bak` beside each.

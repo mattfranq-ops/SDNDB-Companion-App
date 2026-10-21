@@ -18,7 +18,7 @@ function ConditionCard({ cond, active, onToggle }) {
     <div style={{ background: COLORS.panel2, border: `1px solid ${active ? COLORS.gold : COLORS.border}`, borderRadius: 8, padding: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <button onClick={onToggle} title="Toggle active" style={{ background: active ? COLORS.gold : "transparent", border: `1px solid ${active ? COLORS.gold : COLORS.dim}`, borderRadius: 20, color: active ? "#0A0C11" : COLORS.muted, fontSize: 10, fontWeight: 700, padding: "3px 9px", cursor: "pointer", whiteSpace: "nowrap" }}>{active ? "ACTIVE" : "off"}</button>
-        <span style={{ fontWeight: 700, fontSize: 13, flex: 1 }}>{cond.name}</span>
+        <span style={{ fontWeight: 700, fontSize: 13, flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{cond.name}</span>
         {cond.power > 0 && <span style={{ fontSize: 10, color: COLORS.gold }}>+{cond.power} Pwr</span>}
         <span onClick={() => setOpen(!open)} style={{ cursor: "pointer", color: COLORS.blue, fontSize: 10.5 }}>{open ? "hide" : "details"}</span>
       </div>
@@ -39,7 +39,7 @@ function ConditionsPanel({ char, set }) {
         <div style={{ fontSize: 11.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Special Conditions</div>
         {condPower > 0 && <div style={{ fontSize: 11, color: COLORS.gold }}>+{condPower} Power from active conditions</div>}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 8, marginBottom: 10 }}>
         {singles.map(c => <ConditionCard key={c.id} cond={c} active={!!active[c.id]} onToggle={() => toggle(c.id)} />)}
       </div>
       <div style={{ fontSize: 10.5, color: COLORS.dim, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Boosted (may have several at once)</div>

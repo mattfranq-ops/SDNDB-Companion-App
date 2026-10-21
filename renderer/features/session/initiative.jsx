@@ -464,7 +464,7 @@ function InitiativeTab() {
             // Players see teammates but not enemy (NPC) pools unless the DM reveals them.
             const concealed = !isDM && c.sourceType !== "player" && !c.revealed;
             return (
-              <div key={c.id} style={{ position: "relative", background: isAttacker ? `${COLORS.gold}18` : active ? `${COLORS.gold}10` : COLORS.panel, border: `1px solid ${isAttacker ? COLORS.gold : active?COLORS.gold+"88":COLORS.border}`, borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "18px 118px 48px minmax(150px,1fr) minmax(150px,1fr) minmax(150px,1fr) 48px auto", gap: 8, alignItems: "center" }}>
+              <div key={c.id} className="sd-tracker-row" style={{ position: "relative", background: isAttacker ? `${COLORS.gold}18` : active ? `${COLORS.gold}10` : COLORS.panel, border: `1px solid ${isAttacker ? COLORS.gold : active?COLORS.gold+"88":COLORS.border}`, borderRadius: 10, padding: 12, display: "grid", gridTemplateColumns: "18px 118px 48px minmax(150px,1fr) minmax(150px,1fr) minmax(150px,1fr) 48px auto", gap: 8, alignItems: "center" }}>
                 <div style={{ color: active?COLORS.gold:COLORS.dim }}>{active ? <Radio size={13}/> : ""}</div>
                 <TextInput value={c.name} onChange={e => updateCombatant(c.id, { name: e.target.value })} style={{ fontWeight: 700 }} />
                 <TextInput type="number" value={c.init} onChange={e => updateCombatant(c.id, { init: +e.target.value })} style={{ textAlign: "center" }} />
@@ -476,9 +476,9 @@ function InitiativeTab() {
                   <StatStepper label="HP" value={view.hp} max={view.maxHp} color={COLORS.red} onValue={v => updateCombatant(c.id, { hp: v })} onMax={v => updateCombatant(c.id, { maxHp: v })} />
                   <StatStepper label="Ki" value={view.ki} max={view.maxKi} color={COLORS.blue} onValue={v => updateCombatant(c.id, { ki: v })} onMax={v => updateCombatant(c.id, { maxKi: v })} />
                   <StatStepper label="Stam" value={view.stamina} max={view.maxStamina} color={COLORS.gold} onValue={v => updateCombatant(c.id, { stamina: v })} onMax={v => updateCombatant(c.id, { maxStamina: v })} />
-                  <TextInput type="number" value={c.dr} onChange={e => updateCombatant(c.id, { dr: +e.target.value })} title="DR" style={{ textAlign: "center" }} />
+                  <TextInput className="sd-tracker-dr" type="number" value={c.dr} onChange={e => updateCombatant(c.id, { dr: +e.target.value })} title="DR" aria-label="DR" style={{ textAlign: "center" }} />
                 </>)}
-                <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: 3, justifyContent: "end", justifyItems: "center", alignItems: "center" }}>
+                <div className="sd-tracker-actions" style={{ display: "grid", gridTemplateColumns: "auto auto", gap: 3, justifyContent: "end", justifyItems: "center", alignItems: "center" }}>
                   {isDM && c.sourceType !== "player" && (
                     <Btn size="sm" variant="ghost" title={c.revealed ? "Hide resources from players" : "Reveal resources to players"} onClick={() => updateCombatant(c.id, { revealed: !c.revealed })}>{c.revealed ? <Eye size={14} color={COLORS.green}/> : <EyeOff size={14} color={COLORS.dim}/>}</Btn>
                   )}

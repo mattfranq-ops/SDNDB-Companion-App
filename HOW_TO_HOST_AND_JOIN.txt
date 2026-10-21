@@ -118,6 +118,23 @@ OPTIONAL RULES
 
 
 -----------------------------------------------------
+PLAYING ON A PHONE OR TABLET
+-----------------------------------------------------
+ Nothing to install. While the DM is hosting, open the DM's table panel (top
+ right) and read out the link under "PHONES AND TABLETS OPEN", for example:
+
+     http://192.168.1.20:30000/?table=FRIEZA-CREW
+
+ Type it into the phone's browser and tap Join table. Then use the browser's
+ menu : "Add to Home Screen" to keep it as an app icon.
+
+ * Same Wi-Fi as the DM ... use the 192.168 / 10. link.
+ * Somewhere else ......... Hamachi has no phone app. Put the DM's computer and
+                            the phones on a free ZeroTier network (it works
+                            next to Hamachi) and use the DM's ZeroTier link.
+
+
+-----------------------------------------------------
 TROUBLESHOOTING
 -----------------------------------------------------
  * Players cannot connect ...... check that the DM clicked "Start Hosting" and
