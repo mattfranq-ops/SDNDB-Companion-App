@@ -88,9 +88,28 @@ function computeAC(char) {
   return { value: un.value + extra, formula: un.formula + bonusLabel, armored: false, dr: 0 };
 }
 
+// Optional hit locations. A hit that lands on one place is only stopped by
+// what's worn there; neck, rings, held items and artifacts protect everywhere.
+// "any" (the default) is the book rule: every equipped item's DR counts.
+const HIT_LOCATIONS = [
+  { key: "any",  label: "Any",  slots: null },
+  { key: "head", label: "Head", slots: ["head", "eyes"] },
+  { key: "body", label: "Body", slots: ["body", "back", "waist"] },
+  { key: "arms", label: "Arms", slots: ["wrists", "gloves"] },
+  { key: "legs", label: "Legs", slots: ["feet"] },
+];
+const LOCATED_SLOTS = new Set(HIT_LOCATIONS.flatMap(l => l.slots || []));
+function coversLocation(slotKey, location) {
+  const loc = HIT_LOCATIONS.find(l => l.key === location);
+  if (!loc || !loc.slots) return true;
+  return !LOCATED_SLOTS.has(slotKey) || loc.slots.includes(slotKey);
+}
+
 // DR contributed by equipped gear (body armor + any item's dr). Manual char.dr
 // holds other DR sources (class features) and is preserved via drOverride.
-const computeArmorDR = (char) => equippedEntries(char).reduce((s, e) => s + (e.item.dr || 0), 0);
+const computeArmorDR = (char, location = "any") => equippedEntries(char)
+  .filter(e => coversLocation(e.slotKey, location))
+  .reduce((s, e) => s + (e.item.dr || 0), 0);
 
 // Weighted Condition (book Ch.1/9). Worn weighted gear gives Weighted (Heavy);
 // un-attuning flips it to Weighted (Light) for a minute. weightedManual lets a
@@ -171,6 +190,8 @@ export {
   equippedEntries,
   computeAC,
   computeArmorDR,
+  HIT_LOCATIONS,
+  coversLocation,
   computeWeighted,
   weightedPower,
   weightMultiplier,

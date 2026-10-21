@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Dices, Minus, Plus, X } from "lucide-react";
 import { deathSave } from "../../engine/damage.js";
 import { applyToCombatant } from "./apply.js";
+import { HIT_LOCATIONS } from "../../engine/equipment.js";
 import { roll, uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
 import { Btn, Gauge, Tag, TextInput } from "../../ui/atoms.jsx";
@@ -76,13 +77,14 @@ function ApplyPanel({ row, onClose }) {
   const [destruction, setDestruction] = useState(false);
   const [saved, setSaved] = useState(false);
   const [resist, setResist] = useState("none");
+  const [location, setLocation] = useState("any");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const go = async (kind) => {
     const n = Math.floor(Number(amount) || 0);
     if (n <= 0 || busy) return;
     setBusy(true);
-    const r = await applyToCombatant(row.id, { kind, amount: n, pool, destruction, saved, resist });
+    const r = await applyToCombatant(row.id, { kind, amount: n, pool, destruction, saved, resist, location });
     setBusy(false);
     setResult(r);
     if (r.ok) setAmount("");
@@ -107,6 +109,12 @@ function ApplyPanel({ row, onClose }) {
         <div style={{ flex: 1 }} />
         <Btn size="sm" variant="ghost" onClick={onClose} title="Close"><X size={13}/></Btn>
       </div>
+      {row.sourceType === "player" && row.sourceId && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 10.5, color: COLORS.dim }}>Hit location</span>
+          {HIT_LOCATIONS.map(l => <React.Fragment key={l.key}>{chip(location === l.key, l.label, () => setLocation(l.key), l.slots ? `Only gear worn on the ${l.label.toLowerCase()} (plus neck, rings, held items and artifacts) adds DR` : "Every piece of worn gear adds DR (book rule)")}</React.Fragment>)}
+        </div>
+      )}
       {result && (
         <div style={{ fontSize: 12, color: result.ok ? COLORS.muted : COLORS.red, fontFamily: FONTS.mono }}>
           {result.ok

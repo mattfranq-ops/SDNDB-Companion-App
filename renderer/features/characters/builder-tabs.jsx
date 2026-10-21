@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { ArrowLeft, BookOpen, Check, Dices, Minus, Plus, RotateCcw, Search, Shuffle, Trash2, TrendingUp, X, Zap } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Dices, List, Minus, Plus, RefreshCw, RotateCcw, Search, Shuffle, Trash2, TrendingUp, X, Zap } from "lucide-react";
+import { LIFEPATH_TABLES, rollLifepath, rollLifepathField } from "../../data/lifepath-data.js";
 import { emitRoll, logSession } from "../../app/bus.js";
 import { TRAINING_BOON_SPENDS } from "../../data/book-tables.js";
 import { CLASS_DATA, CLASS_NAMES } from "../../data/class-data.js";
@@ -550,6 +551,51 @@ function BioTab({ char, set, withName, withNotes, customSpeciesInput, setCustomS
   );
 }
 
+// Lifepath: rollable backstory prompts. ↻ rerolls one field, the list icon
+// picks from its table, and anything can be typed over. "Use as goal" turns
+// the life goal into a tracked goal below.
+function LifepathBlock({ char, set }) {
+  const lp = char.lifepath || {};
+  const [picking, setPicking] = useState(null);
+  const setField = (key, value) => set({ lifepath: { ...lp, [key]: value } });
+  const goals = char.goals || [];
+  const goalTracked = lp.goal && goals.some(g => g.text === lp.goal);
+  return (
+    <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700 }}>Lifepath</span>
+        <span style={{ fontSize: 10.5, color: COLORS.dim }}>Roll, pick or type each one.</span>
+        <div style={{ flex: 1 }} />
+        <Btn size="sm" onClick={() => set({ lifepath: rollLifepath() })}><Dices size={13}/> Roll all</Btn>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 8 }}>
+        {LIFEPATH_TABLES.map(t => (
+          <div key={t.key} style={{ position: "relative" }}>
+            <div style={{ fontSize: 10, color: COLORS.dim, marginBottom: 2 }}>{t.label}</div>
+            <div style={{ display: "flex", gap: 4 }}>
+              <TextInput value={lp[t.key] || ""} onChange={e => setField(t.key, e.target.value)} placeholder="—" style={{ flex: 1 }} />
+              <Btn size="sm" variant="ghost" onClick={() => setField(t.key, rollLifepathField(t.key, lp[t.key]))} title="Reroll" aria-label={`Reroll ${t.label}`}><RefreshCw size={13}/></Btn>
+              <Btn size="sm" variant="ghost" onClick={() => setPicking(picking === t.key ? null : t.key)} title="Pick from the table" aria-label={`Pick ${t.label}`}><List size={13}/></Btn>
+            </div>
+            {picking === t.key && (
+              <div style={{ position: "absolute", zIndex: 20, left: 0, right: 0, top: "100%", marginTop: 2, background: COLORS.panel, border: `1px solid ${COLORS.borderLit}`, borderRadius: 6, maxHeight: 220, overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+                {t.entries.map(e => (
+                  <div key={e} onClick={() => { setField(t.key, e); setPicking(null); }} style={{ padding: "6px 10px", fontSize: 12, cursor: "pointer", color: lp[t.key] === e ? COLORS.gold : COLORS.text }}>{e}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {lp.goal && !goalTracked && (
+        <div style={{ marginTop: 8 }}>
+          <Btn size="sm" onClick={() => set({ goals: [...goals, { id: uid(), text: lp.goal, done: false }] })}><Plus size={13}/> Track the life goal</Btn>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Story: backstory, goals and the people in the character's life (the
 // Cyberpunk RED Companion's lifepath, objectives and contacts, in SDNDB terms).
 const RELATIONS = ["Ally", "Contact", "Mentor", "Family", "Rival", "Enemy", "Love interest"];
@@ -565,6 +611,7 @@ function StorySection({ char, set }) {
   return (
     <div>
       <div style={head}>Story</div>
+      <LifepathBlock char={char} set={set} />
       <Field label="Backstory"><TextArea value={char.backstory || ""} onChange={e => set({ backstory: e.target.value })} placeholder="Where they come from, who trained them, what drove them to fight…" /></Field>
 
       <div style={head}>Goals</div>

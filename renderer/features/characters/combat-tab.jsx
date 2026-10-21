@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { ChevronDown, ChevronRight, Crosshair, Dices, Flame, Plus, Swords, Trash2, X, Zap } from "lucide-react";
 import { emitRoll } from "../../app/bus.js";
 import { ROLL_MOD_TARGETS, exhaustionPenalty, exhaustionRanks, inKiExhaustion, rollModBonus } from "../../engine/conditions.js";
+import { CHARGE_RESET_LABEL, chargeState, spendCharge } from "../../engine/charges.js";
 import { drIgnoredBy, spendPatch } from "../../engine/damage.js";
 import { applyToCombatant } from "../session/apply.js";
 import { STAT_MOD_LABEL, activeConditionPower, activeFormPower, benefitsOfPower, charTotalLevel, computeKiRank, effectivePowerBonus, profBonusForLevel, statMod, totalPowerBonus } from "../../engine/core.js";
 import { TECH_TYPE_ORDER, classUnarmed, computeCarryWeight, computeKiRegen, computeOverload, computePassives, computePowerLevel, computeTechRefs } from "../../engine/derived.js";
-import { equippedEntries, weightedPower } from "../../engine/equipment.js";
+import { HIT_LOCATIONS, equippedEntries, weightedPower } from "../../engine/equipment.js";
 import { roll, rollD20, rollModeLabel, uid } from "../../lib/dice.js";
 import { CURRENT_HOUSE_RULES, envFlatMod, useHouseRules } from "../../state/hooks.js";
 import { hookSummary, hookType, styleFlatMod, useRegistry } from "../../state/registry.js";
@@ -148,7 +149,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     setApplying(true);
     const res = await applyToCombatant(pending.id, {
       kind: "damage", amount: pending.amount, saved: factor === "half",
-      ignoreDR: pending.ignoreDR, by: char.name, what: pending.move,
+      ignoreDR: pending.ignoreDR, location: pending.location || "any", by: char.name, what: pending.move,
     });
     setApplying(false);
     setPending(res.ok ? { ...pending, done: res } : { ...pending, error: res.reason });
@@ -211,6 +212,16 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
           {mv.resolution === "save" && <span style={{ color: COLORS.gold }}>DC {ref.dc}{mv.saveAbility ? ` ${mv.saveAbility.slice(0,3)}` : ""}</span>}
           {mv.damageDice && <span> · {mv.damageDice}{mv.attackAction && aaDmg > 0 ? <span style={{ color: COLORS.gold }}> +{aaDmg}</span> : ""}</span>}
         </div>
+        {(() => {
+          const st = chargeState(mv);
+          if (!st) return null;
+          return (
+            <div title={`${st.left} of ${st.max} uses left (${CHARGE_RESET_LABEL[st.reset]})`} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              {Array.from({ length: st.max }, (_, i) => <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", border: `1px solid ${COLORS.blue}`, background: i < st.left ? COLORS.blue : "transparent" }} />)}
+              <span style={{ fontSize: 9, color: st.left ? COLORS.dim : COLORS.red, marginLeft: 3 }}>{st.left ? `${st.left} left` : "no uses left"}</span>
+            </div>
+          );
+        })()}
         <button onClick={() => doRoll(mv)} style={{ marginTop: 2, background: `${color}1A`, border: `1px solid ${color}66`, color, borderRadius: 5, padding: "4px 0", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
           <Dices size={12}/> Roll
         </button>
@@ -262,6 +273,10 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     const paid = cost > 0 ? spendPatch(char, "ki", cost) : null;
     const short = cost > 0 && !paid;
     const patch = cost > 0 ? (paid || { ki: 0, temp: { ...(char.temp || { hp: 0, ki: 0, stamina: 0 }), ki: 0 } }) : {};
+    // Techniques with limited uses spend one per roll; out of uses is flagged.
+    const charge = spendCharge(char.techniques, mv.uid);
+    if (charge.ok && charge.left != null) patch.techniques = charge.techniques;
+    const usesNote = !charge.ok ? "no uses left!" : charge.left != null ? `${charge.left} use${charge.left === 1 ? "" : "s"} left` : "";
     // A melee hit during the Attack Action restores 5 × Ki Rank Ki (p.25),
     // doubled by Boosted (Instinct). Only known when there's a target.
     let kiGain = 0;
@@ -276,7 +291,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     const target = combatTarget && combatTarget.id && dmg && (head.kind === "save" || head.landed)
       ? { id: combatTarget.id, name: combatTarget.name, ignoreDR: mv.attackAction ? drIgnoredBy(char) : 0, crit: head.outcome === "crit" }
       : null;
-    setLog(prev => [{ id: uid(), name: mv.name, type: mv.techType, head, dmg, kiSpent: cost, kiShort: short, kiGain, target }, ...prev].slice(0, 10));
+    setLog(prev => [{ id: uid(), name: mv.name, type: mv.techType, head, dmg, kiSpent: cost, kiShort: short, kiGain, target, uses: usesNote, usesOut: !charge.ok }, ...prev].slice(0, 10));
     if (target) setPending({ ...target, amount: dmg.total, save: head.kind === "save", move: mv.name });
     else if (combatTarget) setPending(null);
     const landedOnTarget = head.kind === "attack" && head.outcome;
@@ -376,6 +391,11 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
               </span>
               {pending.error && <span style={{ color: COLORS.red, fontSize: 12 }}>{pending.error}</span>}
               <div style={{ flex: 1 }} />
+              {!pending.save && (
+                <Select value={pending.location || "any"} onChange={e => setPending({ ...pending, location: e.target.value })} aria-label="Hit location" title="Where the hit lands. A located hit only counts the DR worn there." style={{ width: 96, padding: "3px 6px", fontSize: 11.5 }}>
+                  {HIT_LOCATIONS.map(l => <option key={l.key} value={l.key}>{l.key === "any" ? "Anywhere" : l.label}</option>)}
+                </Select>
+              )}
               {pending.save ? (<>
                 <Btn size="sm" variant="danger" disabled={applying} onClick={() => applyPending("full")}>Failed: apply {pending.amount}</Btn>
                 <Btn size="sm" disabled={applying} onClick={() => applyPending("half")}>Saved: apply half</Btn>
@@ -628,6 +648,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
                 {r.staSpent > 0 && <span style={{ color: r.staShort ? COLORS.red : COLORS.gold }}>−{r.staSpent} Stamina{r.staShort ? " (short!)" : ""}</span>}
                 {r.staGain > 0 && <span style={{ color: COLORS.green }}>+{r.staGain} Stamina</span>}
                 {r.kiGain > 0 && <span style={{ color: COLORS.green }}>+{r.kiGain} Ki</span>}
+                {r.uses && <span style={{ color: r.usesOut ? COLORS.red : COLORS.blue }}>{r.uses}</span>}
                 {r.tempKiGain > 0 && <span style={{ color: COLORS.blue }}>+{r.tempKiGain} Temp Ki</span>}
                 {r.note && <span style={{ color: COLORS.dim }}>{r.note}</span>}
               </div>

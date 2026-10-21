@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Archive, ArrowLeft, Check, Dices, Download, Plus, Trash2, TrendingUp, Upload, Users, X } from "lucide-react";
+import { Archive, ArrowLeft, Check, Copy, Dices, Download, Plus, Printer, Trash2, TrendingUp, Upload, Users, X } from "lucide-react";
+import { duplicateChar, printCharacter } from "./print-sheet.js";
 import { _pendingNav, clearPendingNav, onNav } from "../../app/bus.js";
 import { CLASS_NAMES } from "../../data/class-data.js";
 import { CLASS_HIT_DICE, abilityMod, charClasses, charTotalLevel, computeKiRank } from "../../engine/core.js";
@@ -22,7 +23,7 @@ import { StatsTab } from "./stats-tab.jsx";
 import { KnownTechniquesTab, useDerivedCharSync } from "./techniques-tab.jsx";
 import { InventoryTab, VitalsTab } from "./vitals-gear.jsx";
 
-function CharacterEditorSimple({ char, onChange, onDelete, onClose }) {
+function CharacterEditorSimple({ char, onChange, onDelete, onClose, onDuplicate }) {
   const [local, setLocal] = useState(() => migrateChar(char));
   // A Session hand-off may have set the tab we should open on + a combat target.
   const [tab, setTab] = useState(() => (_pendingNav && _pendingNav.entityId === char.id && _pendingNav.sheetTab) || "scouter");
@@ -155,6 +156,8 @@ function CharacterEditorSimple({ char, onChange, onDelete, onClose }) {
           <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }} onChange={importFile} />
           <Btn variant="blue" onClick={() => downloadJSON(local, `${local.name.replace(/\s+/g,'_')}.json`)}><Download size={14}/> Save to device</Btn>
           <Btn onClick={() => fileRef.current.click()}><Upload size={14}/> Load from file</Btn>
+          <Btn onClick={() => printCharacter(local)} title="Opens the print dialog (it can also save a PDF)"><Printer size={14}/> Print sheet</Btn>
+          {onDuplicate && <Btn onClick={() => onDuplicate(local)}><Copy size={14}/> Duplicate character</Btn>}
           <Btn onClick={() => { const next = { ...local, archived: !local.archived }; setLocal(next); onChange(next); if (next.archived) onClose(); }}><Archive size={14}/> {local.archived ? "Unarchive character" : "Archive character"}</Btn>
           <ConfirmBtn variant="danger" size="md" confirmTitle="Delete this character permanently" onConfirm={() => onDelete(local.id)}><Trash2 size={14}/> Delete character</ConfirmBtn>
         </div>
@@ -180,6 +183,8 @@ function CharactersTab() {
   if (chars === null) return <LoadingBlock />;
   const updateChar = (updated) => persist(chars.map(c => c.id === updated.id ? updated : c));
   const deleteChar = (id) => { persist(chars.filter(c => c.id !== id)); setOpenId(null); };
+  // The copy lands right after the original and opens.
+  const duplicate = (c) => { const copy = duplicateChar(c); const i = chars.findIndex(x => x.id === c.id); persist([...chars.slice(0, i + 1), copy, ...chars.slice(i + 1)]); setOpenId(copy.id); };
   const openChar = chars.find(c => c.id === openId);
   const addAndOpen = (c) => { const full = migrateChar(c.id ? c : { ...c, id: uid() }); persist([...chars, full]); setOpenId(full.id); setMode(null); };
 
@@ -215,7 +220,7 @@ function CharactersTab() {
       <ScannerHeader title="PLAYERS" subtitle="Shared with the table. Export any sheet to save a copy on your device." />
       {error && <ErrorBanner text={error} />}
       {openChar ? (
-        <CharacterEditorSimple char={openChar} onChange={updateChar} onClose={() => setOpenId(null)} onDelete={deleteChar} />
+        <CharacterEditorSimple key={openChar.id} char={openChar} onChange={updateChar} onClose={() => setOpenId(null)} onDelete={deleteChar} onDuplicate={duplicate} />
       ) : mode === "menu" ? (
         <div>
           <ModeCard title="Pregenerated" desc="Ready-to-go character from a small preset roster." onClick={() => setMode("pregen")} />
@@ -241,7 +246,11 @@ function CharactersTab() {
                   onMouseEnter={e => e.currentTarget.style.borderColor = COLORS.gold + "66"} onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{c.name}</div>
-                    <ConfirmBtn size="sm" variant="ghost" confirmTitle="Delete this character permanently" onConfirm={() => deleteChar(c.id)}><Trash2 size={13}/></ConfirmBtn>
+                    <div style={{ display: "flex", gap: 2 }} onClick={e => e.stopPropagation()}>
+                      <Btn size="sm" variant="ghost" onClick={() => duplicate(c)} title="Duplicate" aria-label={`Duplicate ${c.name}`}><Copy size={13}/></Btn>
+                      <Btn size="sm" variant="ghost" onClick={() => printCharacter(c)} title="Print sheet" aria-label={`Print ${c.name}`}><Printer size={13}/></Btn>
+                      <ConfirmBtn size="sm" variant="ghost" confirmTitle="Delete this character permanently" onConfirm={() => deleteChar(c.id)}><Trash2 size={13}/></ConfirmBtn>
+                    </div>
                   </div>
                   <div style={{ color: COLORS.muted, fontSize: 12, marginBottom: 8 }}>{[c.species, charClasses(c).map(x => charClasses(c).length > 1 ? `${x.classId} ${x.level}` : x.classId).join(" / ")].filter(Boolean).join(" · ") || "Unset"} {c.level ? `· Lv ${charTotalLevel(c)}` : ""}</div>
                   <Gauge label="HP" value={c.hp} max={c.maxHp||1} color={COLORS.red} />

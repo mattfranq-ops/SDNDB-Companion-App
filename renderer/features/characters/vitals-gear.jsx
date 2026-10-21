@@ -10,6 +10,7 @@ import { computeAttacksPerTurn } from "../../engine/derived.js";
 import { EQUIP_SLOTS, computeAC, computeArmorDR, computeWeighted, equippedEntries, normalizeItem, slotTypeLabel, weightMultiplier } from "../../engine/equipment.js";
 import { cappedArmorDR } from "../../engine/damage.js";
 import { resourceRestPatch } from "../../engine/resources.js";
+import { chargesResetPatch } from "../../engine/charges.js";
 import { activeAura, classDefenseDR } from "../../engine/spellcasting.js";
 import { uid } from "../../lib/dice.js";
 import { attunementCapFor, useHouseRules } from "../../state/hooks.js";
@@ -35,6 +36,7 @@ function VitalsTab({ char, set }) {
     ki: Math.min(char.maxKi || 0, (char.ki || 0) + Math.floor((char.maxKi || 0) / 2)),
     ...(magicRestPatch(char, "short") || {}),
     ...(resourceRestPatch(char, "short") || {}),
+    ...(chargesResetPatch(char, "short") || {}),
     // Stamina Engine (High-Tech Part): the Breather Pool refills on a Short Rest.
     ...(hasCybernetic(char, "stamina-engine") ? { breatherPool: null } : {}),
   });
@@ -48,6 +50,7 @@ function VitalsTab({ char, set }) {
     godKi: { ...(char.godKi || { max: 0 }), current: (char.godKi || {}).max || 0, temp: 0 },
     ...(magicRestPatch(char, "long") || {}),
     ...(resourceRestPatch(char, "long") || {}),
+    ...(chargesResetPatch(char, "long") || {}),
   });
   const card = { background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 12 };
   const head = { fontSize: 10.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 };

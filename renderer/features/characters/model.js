@@ -27,7 +27,7 @@ const blankChar = () => ({
   deathSaves: { success: 0, fail: 0 },
   alignment: "", pictureUrl: "",
   appearance: { age: "", height: "", weight: "", size: "Medium", gender: "", eyes: "", hair: "", skin: "" },
-  personality: "", flaws: "",
+  personality: "", flaws: "", lifepath: {}, // Bio → Story lifepath prompts (data/lifepath-data.js)
   stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
   conditions: [], activeConditions: {}, techniques: [], forms: [], items: [], equipped: [], notes: "", handle: "",
   trainingBoons: { current: 0, max: 4 }, features: [],

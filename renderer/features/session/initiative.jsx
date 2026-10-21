@@ -4,6 +4,7 @@ import { useLocalOption } from "../../state/local-options.js";
 import { deviceId, emitNav, emitRoll, logSession, rollsPrivate, setRollsPrivate } from "../../app/bus.js";
 import { abilityMod, activeFormHpUpkeep, activeFormUpkeep, charTotalLevel, computeKiRank, effectivePowerBonus, statMod } from "../../engine/core.js";
 import { HEALTH_LABEL, damagePatch, deathSave, grantTempPatch, healthState, overloadDamage, spendPatch, totalDR } from "../../engine/damage.js";
+import { chargesResetPatch } from "../../engine/charges.js";
 import { CONDITION_GROUPS, CONDITION_LIBRARY, defaultRounds, findCondition, kiFluxResult } from "../../engine/conditions.js";
 import { computeSaveBonus } from "../../engine/skills.js";
 import { computeOverload } from "../../engine/derived.js";
@@ -237,6 +238,11 @@ function InitiativeTab() {
         const kr = computeKiRank(src);
         merge({ resources: src.resources.map(r => r.reset !== "turn" ? r : { ...r, current: r.regen === "kirank" ? Math.min(r.max, (r.current || 0) + kr) : r.max }) });
       }
+      // Technique uses that refill every turn.
+      if (src && nowActive.sourceType === "player") {
+        const tp = chargesResetPatch(src, "turn");
+        if (tp) merge(tp);
+      }
 
       const conscious = (cur.hp || 0) > 0;
       if (src && conscious) {
@@ -310,7 +316,7 @@ function InitiativeTab() {
         const row = data.combatants.find(c => c.sourceId === e.id);
         const off = sheetTogglesOff(e, (row?.conditions || []).map(x => typeof x === "string" ? x : x.text), []) || {};
         const resources = (e.resources || []).map(r => r.reset === "encounter" ? { ...r, current: r.max } : r);
-        return { ...e, ...off, resources, blocking: false, wildSense: false };
+        return { ...e, ...off, resources, ...(chargesResetPatch(e, "encounter") || {}), blocking: false, wildSense: false };
       }));
     }
     save({ round: 1, turn: 0, combatants: [] });

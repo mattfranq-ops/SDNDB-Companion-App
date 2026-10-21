@@ -22,15 +22,17 @@ async function writeDoc(key, value) {
   await window.storage.set(key, JSON.stringify(value), true);
 }
 
-function targetDR(type, src, row) {
-  if (type === "player" && src) return totalDR(src);
+// Hit locations only narrow a player's worn DR; NPCs and bare rows keep one DR.
+function targetDR(type, src, row, location) {
+  if (type === "player" && src) return totalDR(src, location || "any");
   if (src) return src.dr || 0;
   return row.dr || 0;
 }
 
 // opts: { kind: "damage" | "heal", amount, pool: "hp" | "ki", destruction,
 //         resist: "none" | "resist" | "vuln" | "immune", saved, block,
-//         ignoreDR, by (attacker name), what (move name) }
+//         ignoreDR, location (hit location key, default "any"),
+//         by (attacker name), what (move name) }
 async function applyToCombatant(combatantId, opts) {
   const doc = await readDoc("session_combat");
   const data = doc && doc[0];
@@ -51,13 +53,14 @@ async function applyToCombatant(combatantId, opts) {
     patch = r.patch; amount = r.gained;
   } else {
     const r = resolveDamage(opts.amount, {
-      dr: pool === "hp" ? targetDR(type, src, row) : 0,
+      dr: pool === "hp" ? targetDR(type, src, row, opts.location) : 0,
       ignoreDR: opts.ignoreDR || 0, destruction: !!opts.destruction,
       resist: opts.resist || "none", saved: !!opts.saved,
       block: opts.block != null ? !!opts.block : !!target.blocking, wildSense: !!target.wildSense,
     });
     const d = damagePatch(target, r.damage, pool);
     patch = d.patch; amount = r.damage; steps = r.steps;
+    if (opts.location && opts.location !== "any") steps.unshift(`hit ${opts.location}`);
     if (d.fromTemp > 0) steps.push(`${d.fromTemp} to Temp`);
     if (d.patch.deathSaves) steps.push(d.patch.dead ? "third Death Save failure" : "+2 Death Save failures");
   }

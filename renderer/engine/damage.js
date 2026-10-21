@@ -22,14 +22,16 @@ const half = (n) => Math.floor(n / 2);
 function drCap(char) {
   return profBonusForLevel(charTotalLevel(char)) + 1;
 }
-function cappedArmorDR(char) {
+// `location` (optional, see HIT_LOCATIONS) limits worn DR to what covers the
+// spot that was hit. A manual DR override can't be split up, so it always counts.
+function cappedArmorDR(char, location = "any") {
   const armored = !!computeAC(char)?.armored;
-  const raw = (char.drOverride === true ? (char.dr || 0) : computeArmorDR(char)) + classDefenseDR(char, armored);
+  const raw = (char.drOverride === true ? (char.dr || 0) : computeArmorDR(char, location)) + classDefenseDR(char, armored);
   return Math.min(raw, drCap(char));
 }
-function totalDR(char) {
+function totalDR(char, location = "any") {
   const b = benefitsOfPower(char);
-  return cappedArmorDR(char) + b.toughness + b.extra;
+  return cappedArmorDR(char, location) + b.toughness + b.extra;
 }
 // DR an attacker's Attack-Action hits ignore: 1 per rank of Physical Bonus.
 function drIgnoredBy(char) {

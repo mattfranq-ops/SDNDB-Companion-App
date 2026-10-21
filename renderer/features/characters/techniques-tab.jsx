@@ -4,6 +4,7 @@ import { TECHNIQUE_DATA } from "../../data/technique-data.js";
 import { computeMaxStamina, effectiveStats } from "../../engine/core.js";
 import { TECH_CATEGORIES, TECH_TYPE_ORDER, blankCustomTech, techToKnown, techniquesKnownBudget } from "../../engine/derived.js";
 import { reconcileResources } from "../../engine/resources.js";
+import { CHARGE_RESETS, CHARGE_RESET_LABEL, chargeState } from "../../engine/charges.js";
 import { Btn, EmptyState, Field, Select, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
 import { techResColor } from "./forms.jsx";
@@ -20,6 +21,7 @@ function KnownTechniquesTab({ char, set }) {
   const addTech = (t) => setKnown([...known, techToKnown(t)]);
   const removeTech = (u) => setKnown(known.filter(k => k.uid !== u));
   const cycleMastery = (u) => setKnown(known.map(k => k.uid === u ? { ...k, mastery: ((k.mastery || 0) + 1) % 4 } : k));
+  const setCharges = (u, charges) => setKnown(known.map(k => k.uid === u ? { ...k, charges } : k));
   const knownRefKeys = new Set(known.filter(k => k.techId).map(k => k.techId));
 
   /* ---- Book picker ---- */
@@ -147,11 +149,38 @@ function KnownTechniquesTab({ char, set }) {
                   <span style={{ fontSize: 9.5, color: COLORS.dim }}>Mastery</span>
                   {[1,2,3].map(n => <span key={n} onClick={() => cycleMastery(k.uid)} title="Click to cycle" style={{ cursor: "pointer", fontSize: 13, color: (k.mastery||0) >= n ? COLORS.gold : COLORS.dim }}>★</span>)}
                 </div>
+                <ChargesRow tech={k} onChange={(charges) => setCharges(k.uid, charges)} />
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// Limited uses for a technique ("twice per Long Rest"). Pips show what's left:
+// click a lit pip to spend it, a dim one to give it back. Rests and the tracker
+// refill them (engine/charges.js).
+function ChargesRow({ tech, onChange }) {
+  const st = chargeState(tech);
+  if (!st) {
+    return (
+      <div onClick={() => onChange({ max: 1, used: 0, reset: "long" })} title="Give this technique a limited number of uses" style={{ marginTop: 6, fontSize: 9.5, color: COLORS.dim, cursor: "pointer" }}>+ Limited uses</div>
+    );
+  }
+  const upd = (patch) => onChange({ ...tech.charges, ...patch });
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 9.5, color: COLORS.dim }}>Uses</span>
+      {Array.from({ length: st.max }, (_, i) => {
+        const lit = i < st.left;
+        return <span key={i} onClick={() => upd({ used: lit ? st.used + 1 : st.used - 1 })} title={lit ? "Spend a use" : "Give a use back"} style={{ cursor: "pointer", width: 9, height: 9, borderRadius: "50%", border: `1px solid ${COLORS.blue}`, background: lit ? COLORS.blue : "transparent" }} />;
+      })}
+      <TextInput type="number" value={st.max} onChange={e => { const max = Math.max(0, Math.floor(+e.target.value || 0)); onChange(max ? { ...tech.charges, max, used: Math.min(st.used, max) } : null); }} aria-label="Maximum uses" style={{ width: 40, padding: "1px 4px", fontSize: 10.5, textAlign: "center" }} />
+      <Select value={st.reset} onChange={e => upd({ reset: e.target.value })} aria-label="Uses refill" style={{ width: 118, padding: "1px 4px", fontSize: 10.5 }}>
+        {CHARGE_RESETS.map(r => <option key={r} value={r}>{CHARGE_RESET_LABEL[r]}</option>)}
+      </Select>
     </div>
   );
 }
@@ -180,6 +209,7 @@ function useDerivedCharSync(char, setChar) {
 }
 
 export {
+  ChargesRow,
   KnownTechniquesTab,
   useDerivedCharSync,
 };
