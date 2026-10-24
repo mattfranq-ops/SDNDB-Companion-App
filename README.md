@@ -1,72 +1,86 @@
-# SDNDBZ Companion — Desktop
+# SDNDBZ Companion
 
-A standalone Windows app version of the companion tool: character sheets, NPCs,
-combat tracker, tables, notes — all live-shared with your table over the internet
-using a free Firebase backend.
+A desktop companion app for **Super Dungeons and Dragonball (SD&DBZ)**, the D&D 5e (2024) based
+Dragon Ball tabletop RPG. Character sheets, NPCs and antagonists, a live session tracker with
+initiative, dice, environment and a battle map, a generated galaxy with an economy, and a
+compendium of the book's rules data. Everything is shared live with your table.
 
-## 1. One-time setup
+Unofficial, non-commercial, fan-made. Not affiliated with the SD&DBZ Team, Bird Studio /
+Shueisha / Toei Animation, or Wizards of the Coast. You need the SD&DBZ rulebook to play.
 
-**Requirements on your Linux machine:** Node.js (18+), npm, and Wine (for
-cross-building the Windows `.exe`).
+## How the table works
+
+One person (usually the DM) **hosts**: their copy of the app runs a small table server and
+keeps the campaign on their computer. Everyone else **joins** that computer's address. There is
+no cloud service and no account.
+
+- Same Wi-Fi: players join the host's LAN address (`192.168.x.x` or `10.x.x.x`).
+- Remote players: everyone joins one free VPN network (Hamachi or ZeroTier) and players join
+  the host's VPN address (Hamachi addresses start with `25.`).
+- The host keeps the app open while you play. The table panel at the top right shows the
+  addresses to give players, who is connected, and the Stop hosting button.
+
+### Phones and tablets
+
+Players don't need to install anything on a phone. While the host is hosting, the table server
+also serves the app itself, so a phone opens `http://<host address>:<port>/?table=<TABLE>` in
+its browser and only has to tap Join. The host's table panel lists these links. From the phone
+browser's menu, "Add to Home Screen" keeps it as an app with its own icon.
+
+- Same Wi-Fi: use the host's `192.168` / `10.` link.
+- Away from home: Hamachi has no phone app, so phones can't reach a `25.` address. Join the
+  host's computer and the phones to a free ZeroTier network (it runs fine next to Hamachi) and
+  use the host's ZeroTier address in the link.
+
+Player-facing instructions live in [HOW_TO_HOST_AND_JOIN.txt](HOW_TO_HOST_AND_JOIN.txt).
+Worlds are saved in the host's app data folder (`%APPDATA%\SDNDBZ Companion\worlds` on
+Windows), one JSON file per table name, with a rolling `.bak` beside each.
+
+## Development
+
+Requirements: Node.js 20+ and npm. Building the Windows installer from Linux also needs Wine.
 
 ```bash
-sudo apt update
-sudo apt install -y wine64 wine32 mono-complete
-cd sdndbz-desktop
 npm install
+npm start          # build the renderer and launch Electron
+npm run watch      # rebuild on change (run `npm run electron` alongside it)
+npm test           # rules-engine and table-server tests
+npm run serve      # run a table server on :30000 without Electron (for testing)
+npm run dist:win   # build the Windows installer into release/
 ```
 
-## 2. Create your free Firebase project (~5 minutes)
+You can also open `dist/index.html` in a browser after `npm run build` and use **Join a table**
+against `npm run serve`; hosting needs the desktop app.
 
-1. Go to https://console.firebase.google.com and create a new project (no
-   credit card needed).
-2. Click the **`</>`** (web app) icon to register a new web app. Give it any
-   nickname.
-3. Firebase shows you a `firebaseConfig` object with 6 values
-   (`apiKey`, `authDomain`, `projectId`, `storageBucket`,
-   `messagingSenderId`, `appId`). Copy them.
-4. Open `renderer/firebase-config.js` in this project and paste your values
-   in place of the `PASTE_YOUR_...` placeholders.
-5. In the Firebase console sidebar: **Build → Firestore Database → Create
-   database**. Choose "Start in test mode."
-6. Go to the **Rules** tab of Firestore and replace the rules with:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /{document=**} { allow read, write: if true; }
-     }
-   }
-   ```
-   (This makes the database open to anyone who has your Firebase config —
-   fine for a private home game, not something to publish publicly.)
+## Project layout
 
-## 3. Build the Windows `.exe`
-
-```bash
-npm run dist:win
+```
+main.js, preload.js     Electron main process + the host-server bridge (window.lanHost)
+server.js               The table server: HTTP ops + Server-Sent Events, JSON world files
+renderer/
+  entry.jsx             Splash → Connect → App
+  storage.js            window.storage: local saves + the live table connection
+  app/                  App shell, header table panel, options, roll banner, event bus
+  engine/               Pure rules math (stats, Power, AC/DR, spellcasting, resources,
+                        cybernetics, skills, environment, universe generation)
+  state/                Shared-room hooks, house rules, the World & Rules registry
+  data/                 Book data (classes, feats, techniques, spells, species, NPCs…)
+  features/             One folder per section: characters, npcs, session, universe,
+                        base, compendium, tables, registry, gmtools
+  ui/                   theme.js (colors, fonts, themes) and the shared UI atoms
+scripts/build.mjs       esbuild bundling of the renderer into dist/
+test/                   Vitest suites
 ```
 
-This produces an installer at `release/SDNDBZ Companion Setup 1.0.0.exe`.
-Send that file to your players. Running it installs the app like any normal
-Windows program (it's unsigned, so Windows SmartScreen may show a "Windows
-protected your PC" warning — click "More info" → "Run anyway").
+Conventions worth knowing before you change things:
 
-## 4. Using it
-
-The first time the app opens, everyone enters the same **Room Code**
-(any word you all agree on, e.g. `FRIEZA-CREW`). Everyone using that code
-sees the same live characters, NPCs, combat tracker, and shared notes —
-updates from one player's screen appear on everyone else's within a second
-or two. Each player can still export their own character sheet to a local
-`.json` file from the character screen, independent of the shared room data.
-
-## Re-building after changes
-
-Any time the app's code changes, just re-run:
-```bash
-npm run dist:win
-```
-and re-share the new installer.
-# SDNDB-Companion-App
-# SDNDB-Companion-App
+- **Colors and fonts come from `renderer/ui/theme.js`.** Components style inline and often
+  append a hex alpha (`${COLORS.gold}55`), so theme colors must stay 6-digit hex.
+- **Read stats through the engine** (`statMod`, `effectiveStats`, `effectivePowerBonus`), never
+  `char.stats` directly: the engine layers in gear, feats, forms, conditions and gravity.
+- **Shared state** goes through `useSharedList(key)` in `state/hooks.js`, which reads, writes
+  and live-subscribes a key in the current table.
+- **Book numbers are verified, not guessed.** Data files flag anything not yet confirmed
+  against the book; keep doing that.
+- `test/__snapshots__` pins the numbers the sheet shows. If a rules change is intentional,
+  run `npx vitest run -u` and review the snapshot diff in the PR.

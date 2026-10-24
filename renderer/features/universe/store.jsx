@@ -1,0 +1,396 @@
+import React, { useState } from "react";
+import { Coins, MapPin, Minus, Orbit, Plus, Rocket, RotateCcw, ShoppingCart, X } from "lucide-react";
+import { useLocalOption } from "../../state/local-options.js";
+import { RARITY_TIERS, rarityInfo } from "../../data/book-tables.js";
+import { CONSUMABLE_DATA, GEAR_DATA, GEAR_RULES, WEAPON_DATA } from "../../data/gear-data.js";
+import { HIGH_TECH_PARTS } from "../../data/hightech-data.js";
+import { BOOK_EQUIPMENT, EQUIP_SLOTS, slotTypeLabel } from "../../engine/equipment.js";
+import { UNI_TECH, ensureGalaxyLayout } from "../../engine/universe.js";
+import { uid } from "../../lib/dice.js";
+import { useSharedList } from "../../state/hooks.js";
+import { useBase } from "../../state/base-state.js";
+import { Btn, EmptyState, ErrorBanner, LoadingBlock, ScannerHeader, Select, Tag, TextInput } from "../../ui/atoms.jsx";
+import { COLORS, FONTS } from "../../ui/theme.js";
+import { GalaxyForge, GalaxyMap } from "./galaxy-views.jsx";
+
+/* ===== Store & Night Market economics — planet-contextual pricing and stock.
+   Everything keys off the CURRENT LOCATION planet: its economy biases which
+   categories are stocked and their multipliers, wealth caps the rarity on the
+   shelf, tech level gates High-Tech Parts, and the local tax rate is added on
+   top. The Night Market ignores tax (no receipts) and gets richer on black-market
+   and low-stability worlds. Prices come only from real book Ƶeni values. ===== */
+const STORE_ECONOMY = {
+  "Mining & Ore":       { armor: 0.9,  tech: 1.15, note: "Ore is cheap; finished tech is imported and marked up." },
+  "Heavy Industry":     { armor: 0.85, tech: 0.95, note: "Factory world — armor and parts roll off the line cheap." },
+  "Agriculture":        { armor: 1.05, tech: 1.3,  techStock: false, note: "Farm world — little demand for high-tech; parts are special-order only." },
+  "Tech & R&D":         { armor: 1.05, tech: 0.8,  note: "Cutting-edge labs — cybernetics are cheap and plentiful." },
+  "Luxury Goods":       { armor: 1.25, tech: 1.2,  note: "Everything carries a prestige markup." },
+  "Black Market":       { armor: 0.8,  tech: 0.8,  illicit: true, note: "No receipts, no questions — cheap, but caveat emptor." },
+  "Military Complex":   { armor: 0.8,  tech: 0.9,  note: "Garrison world — battle armor is surplus-cheap." },
+  "Trade Hub":          { armor: 0.95, tech: 0.95, note: "Everything's available at fair, competitive prices." },
+  "Ki-Crystal Harvest": { armor: 1.0,  tech: 1.0,  note: "Ki-crystal wealth keeps prices steady." },
+  "Salvage & Scrap":    { armor: 0.75, tech: 0.7,  note: "Second-hand and salvaged — dirt cheap, quality not guaranteed." },
+};
+const storeEcon = (planet) => STORE_ECONOMY[planet?.economy] || { armor: 1, tech: 1, note: "" };
+const RTIER_IDX = (key) => Math.max(0, RARITY_TIERS.findIndex(r => r.key === (key || "common")));
+const planetTechIdx = (planet) => Math.max(0, UNI_TECH.indexOf(planet?.tech));
+const planetOpen = (planet) => !!planet && !!planet.economy && planet.economy !== "Uninhabited" && planet.population !== "Uninhabited";
+const wealthRarityCap = (planet) => [0, 1, 2, 3, 5][Math.max(0, Math.min(4, planet?.wealthIdx ?? 2))];
+const techNeeded = (zeni) => zeni <= 100 ? 0 : zeni <= 1000 ? 1 : zeni <= 5000 ? 2 : 3;
+// discountPct: the party's Trade Hub, on the home world only.
+function storePrice(base, planet, kind, discountPct = 0) {
+  const mult = kind === "hightech" || kind === "tech" ? storeEcon(planet).tech : storeEcon(planet).armor;
+  return Math.max(1, Math.round((base || 0) * mult * (1 + (planet?.taxRate || 0) / 100) * (1 - discountPct / 100)));
+}
+// Ch.9 technology with a price: Scientific Marvels, Mechs and Vehicles.
+const TECH_FOR_SALE = GEAR_RULES.filter(r => r.zeni && ["Scientific Marvels", "Mechs", "Vehicles"].includes(r.section));
+const GEAR_GROUP = { Gear: "Adventuring Gear", Scouter: "Adventuring Gear", Ammunition: "Weapons", Tool: "Tools" };
+function buildStoreCatalog(customHighTech) {
+  const armor = BOOK_EQUIPMENT.map(e => ({ ...e, kind: "equipment", storeGroup: "Armor & Shields" }));
+  const weapons = WEAPON_DATA.map(e => ({ ...e, kind: "equipment", storeGroup: "Weapons" }));
+  const gear = GEAR_DATA.map(e => ({ ...e, kind: "equipment", storeGroup: GEAR_GROUP[e.category] || "Adventuring Gear" }));
+  const consumables = CONSUMABLE_DATA.map(e => ({ ...e, kind: "equipment", storeGroup: "Consumables" }));
+  const machines = TECH_FOR_SALE.map(r => ({
+    catalogId: r.id, name: r.name, kind: "tech", storeGroup: "Technology", category: r.section === "Vehicles" ? "Vehicle" : r.section === "Mechs" ? "Mech" : "Technology",
+    zeni: r.zeni, rarity: r.rarity || "uncommon", slot: "", notes: r.text,
+  }));
+  const tech = [...HIGH_TECH_PARTS, ...(customHighTech || [])].map(p => ({
+    catalogId: p.id, name: p.name, kind: "hightech", storeGroup: "High-Tech Parts",
+    zeni: p.zeni, rarity: "uncommon", integrationDC: p.integrationDC, effect: p.effect, advancedTech: p.advancedTech,
+  }));
+  return [...armor, ...weapons, ...consumables, ...gear, ...tech, ...machines];
+}
+const storeStock = (planet, catalog) => catalog.filter(it => it.kind === "hightech" || it.kind === "tech"
+  ? (storeEcon(planet).techStock !== false && planetTechIdx(planet) >= techNeeded(it.zeni))
+  : RTIER_IDX(it.rarity) <= wealthRarityCap(planet));
+function purchaseItemFromCatalog(it) {
+  if (it.kind === "equipment") { const { kind, storeGroup, ...gear } = it; return { ...gear, id: uid(), qty: 1 }; }
+  if (it.kind === "tech") return { id: uid(), catalogId: it.catalogId, name: it.name, category: it.category, rarity: it.rarity, zeni: it.zeni, qty: 1, notes: it.notes };
+  return { id: uid(), name: it.name, rarity: it.rarity || "uncommon", zeni: it.zeni, qty: 1, notes: "High-Tech Part — install via Inventory → Cybernetics." };
+}
+// Buying a cart: one Ƶeni deduction for the lot, one inventory entry per unit
+// (each can be equipped or installed on its own). Gear goes straight into an
+// empty slot that fits it; nothing already worn is swapped out. Null when it
+// can't be paid.
+const cartTotal = (cart) => cart.reduce((s, l) => s + l.price * l.qty, 0);
+function checkoutPatch(char, cart) {
+  const total = cartTotal(cart);
+  if (!char || !cart.length || (char.zeni || 0) < total) return null;
+  const bought = cart.flatMap(l => Array.from({ length: l.qty }, () => purchaseItemFromCatalog(l.item)));
+  const equipment = { ...(char.equipment || {}) };
+  const held = new Set((char.items || []).map(i => i.id));
+  const filled = (k) => equipment[k] && held.has(equipment[k]);
+  const equipped = [];
+  for (const it of bought) {
+    if (!it.slot) continue;
+    const slot = EQUIP_SLOTS.find(sl => sl.type === it.slot && !filled(sl.key));
+    if (slot) { equipment[slot.key] = it.id; held.add(it.id); equipped.push(it.name); }
+  }
+  return { zeni: (char.zeni || 0) - total, items: [...(char.items || []), ...bought], equipment, _equipped: equipped };
+}
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < (s || "").length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function nightMarketStock(planet, catalog, seed) {
+  if (!planetOpen(planet)) return [];
+  const econ = storeEcon(planet);
+  const stab = planet?.stabilityIdx ?? 2;
+  const rng = mulberry32(hashStr((planet?.id || "") + ":" + seed));
+  const richness = (econ.illicit ? 2 : 0) + (2 - Math.min(2, stab));            // 0..4 — black-market + unrest = richer
+  const count = Math.min(catalog.length, 3 + richness);
+  const pool = catalog
+    .map(it => ({ it, w: rng() + RTIER_IDX(it.rarity) * 0.15 + (it.zeni > 1000 ? 0.3 : 0) + (it.kind === "hightech" ? 0.2 : 0) }))
+    .sort((a, b) => b.w - a.w).map(x => x.it);
+  return pool.slice(0, count).map(it => { const discount = 0.6 + rng() * 0.25; return { ...it, price: Math.max(1, Math.round((it.zeni || 0) * discount)), discount }; });
+}
+
+// Location + shopper bar shared by the Store and Night Market.
+function MarketHeader({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, isDM }) {
+  const planet = current?.planet;
+  const stat = (label, val, color) => <span style={{ fontSize: 11.5 }}><span style={{ color: COLORS.dim }}>{label} </span><span style={{ color: color || COLORS.text, fontWeight: 600 }}>{val}</span></span>;
+  const shopper = chars.find(c => c.id === shopperId) || null;
+  return (
+    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+      <div style={{ flex: "2 1 340px", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <MapPin size={14} color={COLORS.gold} />
+          <span style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Current Location</span>
+        </div>
+        <Select value={galaxy?.currentPlanetId || ""} onChange={e => onSetLocation(e.target.value)}>
+          <option value="">— pick a world —</option>
+          {galaxy.systems.filter(s => isDM || s.discovered).map(s => (
+            <optgroup key={s.id} label={s.name.replace(/ System$/, "")}>
+              {s.planets.map(p => <option key={p.id} value={p.id}>{p.name}{planetOpen(p) ? ` — ${p.economy}` : " (uninhabited)"}</option>)}
+            </optgroup>
+          ))}
+        </Select>
+        {planet && (
+          <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+            {planetOpen(planet) ? <>
+              {stat("Economy", planet.economy, COLORS.blue)}
+              {stat("Tax", `${planet.taxRate}%`, planet.taxRate >= 20 ? COLORS.red : COLORS.text)}
+              {stat("Wealth", planet.wealth, COLORS.gold)}
+              {stat("Tech", planet.tech)}
+              {stat("Stability", planet.stability, (planet.stabilityIdx ?? 2) <= 1 ? COLORS.red : COLORS.green)}
+            </> : <span style={{ fontSize: 11.5, color: COLORS.dim }}>Uninhabited — no vendors here.</span>}
+          </div>
+        )}
+        {planet && planetOpen(planet) && storeEcon(planet).note && <div style={{ fontSize: 11, color: COLORS.dim, marginTop: 6, fontStyle: "italic" }}>{storeEcon(planet).note}</div>}
+      </div>
+      <div style={{ flex: "1 1 220px", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 14 }}>
+        <div style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Shopping As</div>
+        <Select value={shopperId || ""} onChange={e => setShopperId(e.target.value)}>
+          <option value="">— who's buying —</option>
+          {chars.filter(c => !c.archived).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </Select>
+        {shopper && <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}><Coins size={15} color={COLORS.gold} /><span style={{ fontFamily: FONTS.mono, fontWeight: 800, fontSize: 18, color: COLORS.gold }}>Ƶ {(shopper.zeni || 0).toLocaleString()}</span></div>}
+      </div>
+    </div>
+  );
+}
+
+// One line of the numbers that matter for an item on the shelf.
+function itemStatLine(item) {
+  if (item.kind === "hightech") return `Integration DC ${item.integrationDC}`;
+  if (item.kind === "tech") return item.category;
+  if (item.damageDice) return [`${item.damageDice} ${item.damageType}`, item.properties, item.mastery && `Mastery: ${item.mastery}`].filter(Boolean).join(" · ");
+  if (item.restore) return "Restores " + Object.entries(item.restore).map(([k, v]) => k === "exhaustion" ? `${v} Exhaustion` : `${v === "full" ? "all" : v} ${k === "hp" ? "HP" : k === "ki" ? "Ki" : "Stamina"}`).join(", ");
+  return [item.acBase ? `AC ${item.acBase}` : null, item.acBonus ? `+${item.acBonus} AC` : null, item.dr ? `DR ${item.dr}` : null, item.slot ? slotTypeLabel(item.slot) : item.category, item.weight].filter(Boolean).join(" · ");
+}
+
+function StoreItemCard({ item, price, base, canBuy, reason, onBuy, onAdd, inCart = 0 }) {
+  const rc = rarityInfo(item.rarity).color;
+  const discounted = base != null && price < base;
+  return (
+    <div style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+        <span style={{ fontWeight: 700, fontSize: 13 }}>{item.name}</span>
+        <Tag color={rc}>{rarityInfo(item.rarity).label}</Tag>
+      </div>
+      <div style={{ fontSize: 11, color: item.kind === "hightech" ? COLORS.blue : COLORS.muted, fontFamily: FONTS.mono }}>{itemStatLine(item)}</div>
+      {(item.notes || item.effect) && <div title={item.notes || item.effect} style={{ fontSize: 11.5, color: COLORS.muted, lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "pre-line" }}>{item.notes || item.effect}</div>}
+      <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: `1px solid ${COLORS.border}` }}>
+        <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+          <span style={{ fontFamily: FONTS.mono, fontWeight: 700, color: COLORS.gold }}>Ƶ {price.toLocaleString()}</span>
+          {discounted && <span style={{ fontSize: 10, color: COLORS.dim, textDecoration: "line-through" }}>Ƶ {base.toLocaleString()}</span>}
+        </span>
+        <span style={{ display: "flex", gap: 6 }}>
+          {onAdd && <Btn size="sm" onClick={onAdd} title="Add to cart"><ShoppingCart size={12}/>{inCart ? ` ${inCart}` : ""}</Btn>}
+          <Btn size="sm" variant="gold" disabled={!canBuy} title={canBuy ? "Buy" : reason} onClick={onBuy} style={!canBuy ? { opacity: 0.5, cursor: "not-allowed" } : {}}>Buy</Btn>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const cartKey = (it, price) => `${it.catalogId || it.name}@${price}`;
+function CartBar({ cart, setCart, shopper, onCheckout }) {
+  if (!cart.length) return null;
+  const total = cartTotal(cart);
+  const short = shopper && (shopper.zeni || 0) < total;
+  const setQty = (key, qty) => setCart(cart.flatMap(l => l.key !== key ? [l] : qty > 0 ? [{ ...l, qty }] : []));
+  return (
+    <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.gold}55`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <ShoppingCart size={15} color={COLORS.gold} />
+        <span style={{ fontWeight: 700, fontSize: 13 }}>Cart</span>
+        <div style={{ flex: 1 }} />
+        <Btn size="sm" variant="ghost" onClick={() => setCart([])}><X size={12}/> Empty</Btn>
+      </div>
+      {cart.map(l => (
+        <div key={l.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, marginBottom: 4 }}>
+          <span style={{ flex: 1, fontWeight: 600 }}>{l.item.name}</span>
+          <Btn size="sm" onClick={() => setQty(l.key, l.qty - 1)} aria-label={`One fewer ${l.item.name}`}><Minus size={11}/></Btn>
+          <span style={{ fontFamily: FONTS.mono, minWidth: 22, textAlign: "center" }}>{l.qty}</span>
+          <Btn size="sm" onClick={() => setQty(l.key, l.qty + 1)} aria-label={`One more ${l.item.name}`}><Plus size={11}/></Btn>
+          <span style={{ fontFamily: FONTS.mono, color: COLORS.gold, minWidth: 80, textAlign: "right" }}>Ƶ {(l.price * l.qty).toLocaleString()}</span>
+        </div>
+      ))}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${COLORS.border}` }}>
+        <span style={{ fontSize: 12, color: short ? COLORS.red : COLORS.muted }}>{!shopper ? "Pick who's shopping" : short ? `${shopper.name} is Ƶ ${(total - (shopper.zeni || 0)).toLocaleString()} short` : `${shopper.name} keeps Ƶ ${((shopper.zeni || 0) - total).toLocaleString()}`}</span>
+        <div style={{ flex: 1 }} />
+        <Btn variant="gold" disabled={!shopper || short} onClick={onCheckout}>Buy all · Ƶ {total.toLocaleString()}</Btn>
+      </div>
+    </div>
+  );
+}
+
+const STORE_GROUPS = ["Armor & Shields", "Weapons", "Consumables", "Adventuring Gear", "Tools", "High-Tech Parts", "Technology"];
+function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, onBuy, cart, setCart, onCheckout, isDM }) {
+  const [custom] = useSharedList("custom_hightech_v1");
+  const [group, setGroup] = useState("All");
+  const [query, setQuery] = useState("");
+  const { bonuses } = useBase();
+  if (!galaxy) return <EmptyState icon={Coins} title="No galaxy charted yet" body="Forge a galaxy first — the Store prices gear by the planet you're standing on." />;
+  const catalog = buildStoreCatalog(custom || []);
+  const shopper = chars.find(c => c.id === shopperId) || null;
+  const header = <MarketHeader galaxy={galaxy} current={current} chars={chars} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={onSetLocation} isDM={isDM} />;
+  const inCart = (it, price) => (cart.find(l => l.key === cartKey(it, price)) || {}).qty || 0;
+  const addToCart = (it, price) => {
+    const key = cartKey(it, price);
+    setCart(cart.some(l => l.key === key) ? cart.map(l => l.key === key ? { ...l, qty: l.qty + 1 } : l) : [...cart, { key, item: it, price, qty: 1 }]);
+  };
+  const cartBar = <CartBar cart={cart} setCart={setCart} shopper={shopper} onCheckout={onCheckout} />;
+  const planet = current?.planet;
+  if (!planet) return <div>{header}<EmptyState icon={MapPin} title="Pick a location" body="Choose the world the party is on — the Store stocks and prices gear to its economy and local tax." /></div>;
+  if (!planetOpen(planet)) return <div>{header}<EmptyState icon={Coins} title="No market here" body={`${planet.name} is uninhabited — no vendors. Set a populated world as your location.`} /></div>;
+  const stock = storeStock(planet, catalog).filter(i => !query || `${i.name} ${i.category || ""} ${i.properties || ""}`.toLowerCase().includes(query.toLowerCase()));
+  const shown = group === "All" ? STORE_GROUPS : [group];
+  const homeDiscount = planet.id === galaxy.partyHomePlanetId ? (bonuses.storeDiscount || 0) : 0;
+  return (
+    <div>
+      {header}
+      {homeDiscount > 0 && <div style={{ fontSize: 12, color: COLORS.green, marginBottom: 10 }}>Your Trade Hub takes {homeDiscount}% off everything on your home world.</div>}
+      {cartBar}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+        {["All", ...STORE_GROUPS].map(g => (
+          <button key={g} onClick={() => setGroup(g)} style={{ padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, cursor: "pointer", border: `1px solid ${group === g ? COLORS.gold : COLORS.border}`, background: group === g ? `${COLORS.gold}1A` : COLORS.panel2, color: group === g ? COLORS.gold : COLORS.muted }}>{g}</button>
+        ))}
+        <TextInput value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the shelves" style={{ width: 200, marginLeft: "auto" }} />
+      </div>
+      {shown.map(g => {
+        const items = stock.filter(i => i.storeGroup === g);
+        if (!items.length) return null;
+        return (
+          <div key={g} style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12, color: COLORS.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>{g}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
+              {items.map(it => {
+                const price = storePrice(it.zeni, planet, it.kind, homeDiscount);
+                const canBuy = !!shopper && (shopper.zeni || 0) >= price;
+                return <StoreItemCard key={it.catalogId || it.name} item={it} price={price} base={price !== it.zeni ? it.zeni : null} canBuy={canBuy} reason={!shopper ? "Pick who's shopping" : "Not enough Ƶeni"} onBuy={() => onBuy(it, price)} onAdd={() => addToCart(it, price)} inCart={inCart(it, price)} />;
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 4 }}>Wealth caps rarity on the shelf; tech level and economy decide what's stocked. Buying (one item, or the whole cart) deducts Ƶeni and drops it into {shopper ? shopper.name + "'s" : "the buyer's"} inventory.</div>
+    </div>
+  );
+}
+
+function NightMarketScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLocation, onBuy, onRefresh, cart, setCart, onCheckout, isDM }) {
+  const [custom] = useSharedList("custom_hightech_v1");
+  if (!galaxy) return <EmptyState icon={Rocket} title="No galaxy charted yet" body="Forge a galaxy first — the Night Market rides on the world you're standing on." />;
+  const catalog = buildStoreCatalog(custom || []);
+  const shopper = chars.find(c => c.id === shopperId) || null;
+  const header = <MarketHeader galaxy={galaxy} current={current} chars={chars} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={onSetLocation} isDM={isDM} />;
+  const inCart = (it, price) => (cart.find(l => l.key === cartKey(it, price)) || {}).qty || 0;
+  const addToCart = (it, price) => {
+    const key = cartKey(it, price);
+    setCart(cart.some(l => l.key === key) ? cart.map(l => l.key === key ? { ...l, qty: l.qty + 1 } : l) : [...cart, { key, item: it, price, qty: 1 }]);
+  };
+  const cartBar = <CartBar cart={cart} setCart={setCart} shopper={shopper} onCheckout={onCheckout} />;
+  const planet = current?.planet;
+  if (!planet) return <div>{header}<EmptyState icon={MapPin} title="Pick a location" body="Choose the world the party is on — the Night Market's stock depends on it." /></div>;
+  if (!planetOpen(planet)) return <div>{header}<EmptyState icon={Rocket} title="No stall here" body={`${planet.name} is uninhabited — nobody's dealing. Set a populated world as your location.`} /></div>;
+  const stock = nightMarketStock(planet, catalog, galaxy.marketSeed || 0);
+  const illicit = storeEcon(planet).illicit;
+  return (
+    <div>
+      {header}
+      {cartBar}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 12, color: COLORS.purple, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Tonight's Stall</div>
+        <span style={{ fontSize: 11, color: COLORS.dim }}>{illicit ? "A black-market world — the stall runs deep." : (planet.stabilityIdx ?? 2) <= 1 ? "Low stability — desperate goods change hands." : "A quiet corner deal — thin pickings."} No tax, no receipts.</span>
+        <div style={{ flex: 1 }} />
+        {isDM && <Btn size="sm" onClick={onRefresh}><RotateCcw size={13} /> New Stock</Btn>}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
+        {stock.map(it => {
+          const canBuy = !!shopper && (shopper.zeni || 0) >= it.price;
+          return <StoreItemCard key={(it.catalogId || it.name) + it.price} item={it} price={it.price} base={it.zeni} canBuy={canBuy} reason={!shopper ? "Pick who's shopping" : "Not enough Ƶeni"} onBuy={() => onBuy(it, it.price)} onAdd={() => addToCart(it, it.price)} inCart={inCart(it, it.price)} />;
+        })}
+      </div>
+      <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 10 }}>Stock is fixed per world until the DM pulls New Stock. Richer on black-market and low-stability worlds.</div>
+    </div>
+  );
+}
+
+function UniverseTab() {
+  const [screen, setScreen] = useState("map"); // map | store | market
+  const [state, persist, error] = useSharedList("universe");
+  const [chars, persistChars] = useSharedList("characters_v2");
+  const [shopperId, setShopperId] = useState("");
+  const [cart, setCart] = useState([]);   // [{ key, item, price, qty }], per device
+  const [notice, setNotice] = useState("");
+  // View mode is per-device (not shared): the DM's device runs "dm", players'
+  // devices run "player" and only see revealed systems.
+  const [viewOpt, setViewOpt] = useLocalOption("sdndbz_universe_view_v1", { mode: "player" });
+  const isDM = viewOpt.mode === "dm";
+  if (state === null || chars === null) return <LoadingBlock />;
+  const galaxy = state && state[0] ? ensureGalaxyLayout(state[0]) : null;
+  const setGalaxy = (g) => persist(g ? [g] : []);
+  const characterNames = (chars || []).filter(c => !c.archived).map(c => c.name).filter(Boolean);
+  // Current-location plumbing for the Store / Night Market.
+  const currentLoc = galaxy ? galaxy.systems.flatMap(s => s.planets.map(p => ({ system: s, planet: p }))).find(x => x.planet.id === galaxy.currentPlanetId) || null : null;
+  const setLocation = (planetId) => galaxy && setGalaxy({ ...galaxy, currentPlanetId: planetId });
+  const refreshMarket = () => galaxy && setGalaxy({ ...galaxy, marketSeed: (galaxy.marketSeed || 0) + 1 });
+  const buy = (catalogItem, price) => {
+    if (!shopperId) return;
+    persistChars((chars || []).map(c => c.id === shopperId ? { ...c, zeni: Math.max(0, (c.zeni || 0) - price), items: [...(c.items || []), purchaseItemFromCatalog(catalogItem)] } : c));
+  };
+  const checkout = () => {
+    const patch = checkoutPatch((chars || []).find(c => c.id === shopperId), cart);
+    if (!patch) return;
+    const { _equipped, ...rest } = patch;
+    persistChars((chars || []).map(c => c.id === shopperId ? { ...c, ...rest } : c));
+    setCart([]);
+    if (_equipped.length) setNotice(`Equipped ${_equipped.join(", ")}`);
+  };
+
+  return (
+    <div>
+      <ScannerHeader title="UNIVERSE & ECONOMY" subtitle="The galaxy your campaign lives in — worlds, economies, and who calls them home." />
+      {error && <ErrorBanner text={error} />}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+        {[["map", "Galaxy Map", Orbit], ["store", "Store", Coins], ["market", "Night Market", Rocket]].map(([k, label, Icon]) => (
+          <button key={k} onClick={() => setScreen(k)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", background: screen === k ? `${COLORS.gold}1A` : COLORS.panel2, color: screen === k ? COLORS.gold : COLORS.muted, border: `1px solid ${screen === k ? COLORS.gold + "55" : COLORS.border}` }}><Icon size={14} /> {label}</button>
+        ))}
+        <div style={{ flex: 1 }} />
+        {/* Per-device DM / Player view */}
+        <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: `1px solid ${COLORS.border}` }}>
+          {[["dm", "DM View"], ["player", "Player View"]].map(([m, label]) => (
+            <button key={m} onClick={() => setViewOpt({ mode: m })} title={m === "dm" ? "See everything and control what players discover" : "See only what the DM has revealed"} style={{ padding: "7px 12px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", background: viewOpt.mode === m ? (m === "dm" ? `${COLORS.gold}22` : `${COLORS.blue}22`) : "transparent", color: viewOpt.mode === m ? (m === "dm" ? COLORS.gold : COLORS.blue) : COLORS.muted, border: "none" }}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {screen === "map" && (galaxy
+        ? <GalaxyMap galaxy={galaxy} characters={characterNames} onChange={setGalaxy} isDM={isDM} />
+        : isDM ? <GalaxyForge onGenerate={setGalaxy} />
+          : <EmptyState icon={Orbit} title="No galaxy charted yet" body="The DM hasn't forged the galaxy for this campaign — check back once they have." />)}
+
+      {notice && screen !== "map" && <div style={{ fontSize: 12, color: COLORS.green, marginBottom: 10 }}>{notice}</div>}
+      {screen === "store" && (
+        <StoreScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} cart={cart} setCart={(c) => { setNotice(""); setCart(c); }} onCheckout={checkout} isDM={isDM} />
+      )}
+      {screen === "market" && (
+        <NightMarketScreen galaxy={galaxy} current={currentLoc} chars={chars || []} shopperId={shopperId} setShopperId={setShopperId} onSetLocation={setLocation} onBuy={buy} onRefresh={refreshMarket} cart={cart} setCart={(c) => { setNotice(""); setCart(c); }} onCheckout={checkout} isDM={isDM} />
+      )}
+    </div>
+  );
+}
+
+export {
+  STORE_ECONOMY,
+  storeEcon,
+  RTIER_IDX,
+  planetTechIdx,
+  planetOpen,
+  wealthRarityCap,
+  techNeeded,
+  storePrice,
+  buildStoreCatalog,
+  storeStock,
+  purchaseItemFromCatalog,
+  cartTotal,
+  checkoutPatch,
+  hashStr,
+  mulberry32,
+  nightMarketStock,
+  MarketHeader,
+  StoreItemCard,
+  StoreScreen,
+  NightMarketScreen,
+  UniverseTab,
+};

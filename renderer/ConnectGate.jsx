@@ -1,19 +1,18 @@
-import React, { useState } from "react";
-
-const COLORS = {
-  bg: "#0A0C11", panel: "#12151D", panel2: "#0D0F16", border: "#232838",
-  gold: "#F5B942", blue: "#5AA9E6", text: "#E8E9ED", muted: "#8A93A6", red: "#E5484D",
-};
+import React, { useState, useEffect } from "react";
+import { Radio, Wifi } from "lucide-react";
+import { SHOW_ADDRESSES_KEY } from "./app/TableStatus.jsx";
+import { chamfer } from "./ui/atoms.jsx";
+import { COLORS, FONTS, RESUME_KEY } from "./ui/theme.js";
 
 const DEFAULT_PORT = 30000;
 
-const inputStyle = {
-  width: "100%", background: COLORS.panel2, border: `1px solid ${COLORS.border}`,
-  borderRadius: 7, color: COLORS.text, padding: "10px 12px", fontSize: 14,
+const inputStyle = () => ({
+  width: "100%", background: COLORS.input, border: `1px solid ${COLORS.border}`,
+  borderRadius: 4, color: COLORS.text, padding: "10px 12px", fontSize: 14,
   marginBottom: 12, outline: "none", boxSizing: "border-box",
-  fontFamily: "JetBrains Mono, monospace",
-};
-const labelStyle = { fontSize: 11, color: COLORS.muted, textAlign: "left", marginBottom: 5, letterSpacing: 0.4 };
+  fontFamily: FONTS.mono,
+});
+const labelStyle = () => ({ fontSize: 10.5, color: COLORS.muted, textAlign: "left", marginBottom: 5, letterSpacing: 1, fontFamily: FONTS.mono });
 
 function buildBase(addr, port) {
   let a = (addr || "").trim();
@@ -25,6 +24,15 @@ function buildBase(addr, port) {
   return a.replace(/\/+$/, "");
 }
 
+// Turn low-level failures into something a player can act on.
+function friendlyError(e, fallback) {
+  const m = (e && e.message) || "";
+  if (/EADDRINUSE/i.test(m)) return "That port is already in use. Close the other copy of the app, or pick another port.";
+  if (/EACCES/i.test(m)) return "Your system blocked that port. Try a port above 1024, like 30000.";
+  if (/reach the table server/i.test(m)) return "Couldn't reach the host. Check the address and port, that the DM has started hosting, and that you're on the same network or VPN.";
+  return m || fallback;
+}
+
 export default function ConnectGate({ children }) {
   const hasHost = typeof window !== "undefined" && !!window.lanHost;
   const [ready, setReady] = useState(false);
@@ -34,28 +42,65 @@ export default function ConnectGate({ children }) {
 
   // Join fields
   const [addr, setAddr] = useState((window.storage.getServer() || "").replace(/^https?:\/\//, "").replace(/:\d+$/, ""));
-  const [joinPort, setJoinPort] = useState(DEFAULT_PORT);
+  const [joinPort, setJoinPort] = useState(() => {
+    const m = (window.storage.getServer() || "").match(/:(\d+)$/);
+    return m ? Number(m[1]) : DEFAULT_PORT;
+  });
   const [joinWorld, setJoinWorld] = useState(window.storage.getWorld());
+
+  // Opened from the host's own address (a phone's browser, or the installed
+  // home-screen app)? Then the server is this page's origin and players only
+  // need the table name. ?table=NAME in the link fills that in too.
+  const [sameOrigin, setSameOrigin] = useState(null); // origin string once confirmed
+  const [editServer, setEditServer] = useState(false);
+  useEffect(() => {
+    if (hasHost || !/^https?:$/.test(location.protocol)) return;
+    let alive = true;
+    fetch("/ping").then(r => r.json()).then(j => {
+      if (!alive || !j || j.app !== "sdndbz-companion") return;
+      setSameOrigin(location.origin);
+      const t = new URLSearchParams(location.search).get("table");
+      if (t) setJoinWorld(t);
+    }).catch(() => { /* a plain web host, not the table server */ });
+    return () => { alive = false; };
+  }, []);
 
   // Host fields
   const [hostPort, setHostPort] = useState(DEFAULT_PORT);
   const [hostWorld, setHostWorld] = useState(window.storage.getWorld());
-  const [ips, setIps] = useState([]);
+
+  // "Leave table" in the header drops back to this screen.
+  useEffect(() => {
+    const onLeave = () => { setReady(false); setBusy(false); setError(""); };
+    window.addEventListener("sdndbz:leave", onLeave);
+    return () => window.removeEventListener("sdndbz:leave", onLeave);
+  }, []);
+
+  // After an in-app reload (theme switch) rejoin the table we were on. The host
+  // server lives in the main process, so it is still running.
+  useEffect(() => {
+    let resume = false;
+    try { resume = sessionStorage.getItem(RESUME_KEY) === "1"; sessionStorage.removeItem(RESUME_KEY); } catch { /* ignore */ }
+    if (!resume || !window.storage.getServer() || !window.storage.getWorld()) return;
+    setBusy(true);
+    window.storage.connect().then(() => setReady(true)).catch(() => {}).finally(() => setBusy(false));
+  }, []);
 
   if (ready) return children;
 
+  const useOrigin = !!sameOrigin && !editServer;
   const doJoin = async () => {
     setError("");
-    if (!addr.trim()) return setError("Enter the host's address.");
+    if (!useOrigin && !addr.trim()) return setError("Enter the host's address.");
     if (!joinWorld.trim()) return setError("Enter a table name.");
     setBusy(true);
     try {
-      window.storage.setServer(buildBase(addr, joinPort));
+      window.storage.setServer(useOrigin ? sameOrigin : buildBase(addr, joinPort));
       window.storage.setWorld(joinWorld);
       await window.storage.connect();
       setReady(true);
     } catch (e) {
-      setError(e.message || "Connection failed.");
+      setError(friendlyError(e, "Connection failed."));
     } finally {
       setBusy(false);
     }
@@ -66,86 +111,82 @@ export default function ConnectGate({ children }) {
     if (!hostWorld.trim()) return setError("Name your table.");
     setBusy(true);
     try {
-      await window.lanHost.start(Number(hostPort) || DEFAULT_PORT);
-      const list = await window.lanHost.ips();
-      setIps(list || []);
-      window.storage.setServer(`http://localhost:${Number(hostPort) || DEFAULT_PORT}`);
+      const port = Number(hostPort) || DEFAULT_PORT;
+      await window.lanHost.start(port);
+      window.storage.setServer(`http://localhost:${port}`);
       window.storage.setWorld(hostWorld);
       await window.storage.connect();
+      // Open the table panel once so the host sees the addresses to share.
+      try { sessionStorage.setItem(SHOW_ADDRESSES_KEY, "1"); } catch { /* ignore */ }
       setReady(true);
     } catch (e) {
-      setError(e.message || "Couldn't start the server.");
+      setError(friendlyError(e, "Couldn't start the server."));
     } finally {
       setBusy(false);
     }
   };
 
-  const Tab = ({ id, label }) => (
-    <button onClick={() => { setMode(id); setError(""); }} style={{
-      flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 700, cursor: "pointer",
-      background: mode === id ? `${COLORS.gold}1A` : "transparent",
+  const Tab = ({ id, label, Icon }) => (
+    <button onClick={() => { setMode(id); setError(""); }} aria-pressed={mode === id} style={{
+      flex: 1, padding: "10px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", letterSpacing: 0.8, textTransform: "uppercase",
+      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+      background: mode === id ? `${COLORS.gold}14` : "transparent",
       color: mode === id ? COLORS.gold : COLORS.muted,
       border: "none", borderBottom: `2px solid ${mode === id ? COLORS.gold : "transparent"}`,
-    }}>{label}</button>
+    }}><Icon size={14} />{label}</button>
   );
+
+  const actionBtn = (color) => ({
+    width: "100%", padding: "11px 0", borderRadius: 4, border: `1px solid ${color}66`,
+    background: `${color}1A`, color, fontWeight: 800, fontSize: 13.5, letterSpacing: 1, textTransform: "uppercase",
+    cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, boxShadow: `0 0 18px ${color}22`,
+  });
+  const digits = (v) => v.replace(/\D/g, "").slice(0, 5);
 
   return (
     <div style={{
-      minHeight: "100vh", background: COLORS.bg, color: COLORS.text,
+      minHeight: "100vh", color: COLORS.text, padding: 20, boxSizing: "border-box",
+      background: `radial-gradient(ellipse at 50% 0%, ${COLORS.blue}14, transparent 60%), ${COLORS.bg}`,
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "Inter, sans-serif",
+      fontFamily: FONTS.body,
     }}>
       <div style={{
-        background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 12,
-        padding: 28, width: 420, textAlign: "center",
+        background: COLORS.panel, clipPath: chamfer(18), boxShadow: `inset 0 0 0 1px ${COLORS.border}`,
+        padding: 30, width: 440, maxWidth: "100%", textAlign: "center",
       }}>
-        <div style={{ fontFamily: "Orbitron, sans-serif", fontWeight: 900, fontSize: 18, marginBottom: 4, letterSpacing: 1 }}>
+        <div style={{ width: 44, height: 44, margin: "0 auto 12px", clipPath: chamfer(10), background: `linear-gradient(135deg, ${COLORS.gold}, ${COLORS.red})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 14, height: 14, borderRadius: "50%", background: COLORS.onAccent, boxShadow: `0 0 0 4px ${COLORS.gold}` }} />
+        </div>
+        <div style={{ fontFamily: FONTS.display, fontWeight: 900, fontSize: 19, marginBottom: 4, letterSpacing: 1.4 }}>
           SDNDBZ COMPANION
         </div>
-        <div style={{ color: COLORS.muted, fontSize: 12.5, marginBottom: 18, lineHeight: 1.5 }}>
+        <div style={{ color: COLORS.muted, fontSize: 12.5, marginBottom: 20, lineHeight: 1.55 }}>
           One player hosts the table on their machine; everyone else joins their
           address over LAN or a VPN like Hamachi.
         </div>
 
         <div style={{ display: "flex", marginBottom: 20, borderBottom: `1px solid ${COLORS.border}` }}>
-          <Tab id="host" label="Host a table" />
-          <Tab id="join" label="Join a table" />
+          <Tab id="host" label="Host a table" Icon={Radio} />
+          <Tab id="join" label="Join a table" Icon={Wifi} />
         </div>
 
         {mode === "host" && (
           hasHost ? (
             <>
-              <div style={labelStyle}>TABLE NAME</div>
-              <input style={inputStyle} value={hostWorld} autoFocus
+              <div style={labelStyle()}>TABLE NAME</div>
+              <input style={inputStyle()} value={hostWorld} autoFocus aria-label="Table name"
                 onChange={(e) => setHostWorld(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && doHost()}
                 placeholder="e.g. FRIEZA-CREW" />
-              <div style={labelStyle}>PORT</div>
-              <input style={inputStyle} value={hostPort}
-                onChange={(e) => setHostPort(e.target.value.replace(/\D/g, ""))}
+              <div style={labelStyle()}>PORT</div>
+              <input style={inputStyle()} value={hostPort} inputMode="numeric" aria-label="Port"
+                onChange={(e) => setHostPort(digits(e.target.value))}
+                onKeyDown={(e) => e.key === "Enter" && doHost()}
                 placeholder={String(DEFAULT_PORT)} />
-
-              {ips.length > 0 && (
-                <div style={{
-                  background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8,
-                  padding: 12, marginBottom: 12, textAlign: "left",
-                }}>
-                  <div style={{ fontSize: 11, color: COLORS.gold, marginBottom: 6, letterSpacing: 0.4 }}>
-                    PLAYERS JOIN WITH
-                  </div>
-                  {ips.map((ip) => (
-                    <div key={ip.address} style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 13 }}>
-                      {ip.address}:{hostPort} <span style={{ color: COLORS.muted }}>({ip.name})</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button onClick={doHost} disabled={busy} style={{
-                width: "100%", padding: "10px 0", borderRadius: 7, border: `1px solid ${COLORS.gold}55`,
-                background: `${COLORS.gold}1A`, color: COLORS.gold, fontWeight: 700, fontSize: 14,
-                cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
-              }}>{busy ? "Starting…" : "Start Hosting"}</button>
+              <button onClick={doHost} disabled={busy} style={actionBtn(COLORS.gold)}>{busy ? "Starting…" : "Start Hosting"}</button>
+              <div style={{ color: COLORS.dim, fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
+                After it starts, the addresses for your players are in the table panel at the top right.
+              </div>
             </>
           ) : (
             <div style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6, padding: "8px 0 4px" }}>
@@ -155,32 +196,44 @@ export default function ConnectGate({ children }) {
           )
         )}
 
-        {mode === "join" && (
+        {mode === "join" && useOrigin && (
           <>
-            <div style={labelStyle}>HOST ADDRESS</div>
-            <input style={inputStyle} value={addr} autoFocus
-              onChange={(e) => setAddr(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && doJoin()}
-              placeholder="e.g. 25.1.2.3" />
-            <div style={labelStyle}>PORT</div>
-            <input style={inputStyle} value={joinPort}
-              onChange={(e) => setJoinPort(e.target.value.replace(/\D/g, ""))}
-              placeholder={String(DEFAULT_PORT)} />
-            <div style={labelStyle}>TABLE NAME</div>
-            <input style={inputStyle} value={joinWorld}
+            <div style={{ color: COLORS.muted, fontSize: 12.5, marginBottom: 14, lineHeight: 1.5 }}>
+              Connected to the host at <b style={{ color: COLORS.text, fontFamily: FONTS.mono }}>{sameOrigin.replace(/^https?:\/\//, "")}</b>.
+            </div>
+            <div style={labelStyle()}>TABLE NAME</div>
+            <input style={inputStyle()} value={joinWorld} autoFocus aria-label="Table name" autoCapitalize="characters" autoCorrect="off"
               onChange={(e) => setJoinWorld(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && doJoin()}
               placeholder="e.g. FRIEZA-CREW" />
-            <button onClick={doJoin} disabled={busy} style={{
-              width: "100%", padding: "10px 0", borderRadius: 7, border: `1px solid ${COLORS.blue}55`,
-              background: `${COLORS.blue}1A`, color: COLORS.blue, fontWeight: 700, fontSize: 14,
-              cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
-            }}>{busy ? "Connecting…" : "Connect"}</button>
+            <button onClick={doJoin} disabled={busy} style={actionBtn(COLORS.blue)}>{busy ? "Connecting…" : "Join table"}</button>
+            <button onClick={() => setEditServer(true)} style={{ marginTop: 12, background: "none", border: "none", color: COLORS.dim, fontSize: 11.5, cursor: "pointer", textDecoration: "underline" }}>Use a different host</button>
+          </>
+        )}
+
+        {mode === "join" && !useOrigin && (
+          <>
+            <div style={labelStyle()}>HOST ADDRESS</div>
+            <input style={inputStyle()} value={addr} autoFocus aria-label="Host address"
+              onChange={(e) => setAddr(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doJoin()}
+              placeholder="e.g. 25.1.2.3" />
+            <div style={labelStyle()}>PORT</div>
+            <input style={inputStyle()} value={joinPort} inputMode="numeric" aria-label="Port"
+              onChange={(e) => setJoinPort(digits(e.target.value))}
+              onKeyDown={(e) => e.key === "Enter" && doJoin()}
+              placeholder={String(DEFAULT_PORT)} />
+            <div style={labelStyle()}>TABLE NAME</div>
+            <input style={inputStyle()} value={joinWorld} aria-label="Table name"
+              onChange={(e) => setJoinWorld(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doJoin()}
+              placeholder="e.g. FRIEZA-CREW" />
+            <button onClick={doJoin} disabled={busy} style={actionBtn(COLORS.blue)}>{busy ? "Connecting…" : "Connect"}</button>
           </>
         )}
 
         {error && (
-          <div style={{ color: COLORS.red, fontSize: 12.5, marginTop: 12 }}>{error}</div>
+          <div role="alert" style={{ color: COLORS.red, fontSize: 12.5, marginTop: 14, lineHeight: 1.5, background: `${COLORS.red}12`, border: `1px solid ${COLORS.red}44`, borderRadius: 4, padding: "8px 10px", textAlign: "left" }}>{error}</div>
         )}
       </div>
     </div>

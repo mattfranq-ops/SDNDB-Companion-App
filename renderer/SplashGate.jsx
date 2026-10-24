@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { chamfer } from "./ui/atoms.jsx";
+import { COLORS, FONTS } from "./ui/theme.js";
 
-const COLORS = {
-  bg: "#0A0C11", panel: "#12151D", panel2: "#0D0F16", border: "#232838",
-  gold: "#F5B942", text: "#E8E9ED", muted: "#8A93A6", dim: "#5C6478",
-};
 
 // Bump this key if the acknowledgement text materially changes — everyone will
 // then be shown the new version once.
@@ -49,19 +47,20 @@ export default function SplashGate({ children }) {
 
   return (
     <div style={{
-      minHeight: "100vh", background: COLORS.bg, color: COLORS.text,
+      minHeight: "100vh", color: COLORS.text,
+      background: `radial-gradient(ellipse at 50% 0%, ${COLORS.blue}14, transparent 60%), ${COLORS.bg}`,
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "Inter, sans-serif", padding: 24, boxSizing: "border-box",
+      fontFamily: FONTS.body, padding: 24, boxSizing: "border-box",
     }}>
       <div style={{
-        background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 12,
+        background: COLORS.panel, clipPath: chamfer(18), boxShadow: `inset 0 0 0 1px ${COLORS.border}`,
         width: 640, maxWidth: "100%", maxHeight: "92vh", display: "flex", flexDirection: "column",
         overflow: "hidden",
       }}>
         <div style={{ padding: "28px 32px 18px", borderBottom: `1px solid ${COLORS.border}` }}>
           <div style={{
-            fontFamily: "Orbitron, sans-serif", fontWeight: 900, fontSize: 20,
-            letterSpacing: 1, marginBottom: 6,
+            fontFamily: FONTS.display, fontWeight: 900, fontSize: 20,
+            letterSpacing: 1.4, marginBottom: 6,
           }}>
             SDNDBZ COMPANION
           </div>
@@ -75,7 +74,7 @@ export default function SplashGate({ children }) {
           onScroll={check}
           style={{
             padding: "24px 32px", overflowY: "auto", flex: 1,
-            background: COLORS.panel2,
+            background: COLORS.input,
           }}
         >
           <Section title="Dragon Ball">
@@ -147,7 +146,7 @@ export default function SplashGate({ children }) {
             onClick={accept}
             disabled={!atEnd}
             style={{
-              padding: "10px 22px", borderRadius: 7,
+              padding: "10px 22px", borderRadius: 4, letterSpacing: 0.8, textTransform: "uppercase",
               border: `1px solid ${atEnd ? `${COLORS.gold}55` : COLORS.border}`,
               background: atEnd ? `${COLORS.gold}1A` : "transparent",
               color: atEnd ? COLORS.gold : COLORS.dim,
