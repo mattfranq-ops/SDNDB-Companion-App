@@ -78,16 +78,17 @@ function ApplyPanel({ row, onClose }) {
   const [saved, setSaved] = useState(false);
   const [resist, setResist] = useState("none");
   const [location, setLocation] = useState("any");
+  const [crit, setCrit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const go = async (kind) => {
     const n = Math.floor(Number(amount) || 0);
     if (n <= 0 || busy) return;
     setBusy(true);
-    const r = await applyToCombatant(row.id, { kind, amount: n, pool, destruction, saved, resist, location });
+    const r = await applyToCombatant(row.id, { kind, amount: n, pool, destruction, saved, resist, location, crit });
     setBusy(false);
     setResult(r);
-    if (r.ok) setAmount("");
+    if (r.ok) { setAmount(""); setCrit(false); }
   };
   const chip = (on, label, onClick, title) => (
     <button onClick={onClick} title={title} aria-pressed={on} style={{ padding: "4px 9px", fontSize: 11.5, fontWeight: 700, borderRadius: 5, cursor: "pointer", border: `1px solid ${on ? COLORS.gold : COLORS.border}`, background: on ? `${COLORS.gold}1A` : "transparent", color: on ? COLORS.gold : COLORS.muted }}>{label}</button>
@@ -106,10 +107,11 @@ function ApplyPanel({ row, onClose }) {
         {chip(saved, "Saved (half)", () => setSaved(!saved), "They passed the save for half damage")}
         {chip(resist === "resist", "Resist", () => setResist(resist === "resist" ? "none" : "resist"))}
         {chip(resist === "vuln", "Vulnerable", () => setResist(resist === "vuln" ? "none" : "vuln"))}
+        {chip(crit, "Crit", () => setCrit(!crit), "A Critical Hit: rolls a Crit Injury where it lands (House Rules)")}
         <div style={{ flex: 1 }} />
         <Btn size="sm" variant="ghost" onClick={onClose} title="Close"><X size={13}/></Btn>
       </div>
-      {row.sourceType === "player" && row.sourceId && (
+      {(row.sourceType === "player" && row.sourceId || crit) && (
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ fontSize: 10.5, color: COLORS.dim }}>Hit location</span>
           {HIT_LOCATIONS.map(l => <React.Fragment key={l.key}>{chip(location === l.key, l.label, () => setLocation(l.key), l.slots ? `Only gear worn on the ${l.label.toLowerCase()} (plus neck, rings, held items and artifacts) adds DR` : "Every piece of worn gear adds DR (book rule)")}</React.Fragment>)}

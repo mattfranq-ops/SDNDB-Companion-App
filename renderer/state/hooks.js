@@ -69,6 +69,8 @@ const HOUSE_RULE_DEFAULTS = {
   quickCombat: false,             // abstract skirmish/war resolver in the Session tab
   baseBuilding: false,            // player-faction home base + capital ship (its own tab)
   moreGoverning: false,           // governance/economy layer on the home world (needs baseBuilding)
+  critInjuries: true,             // a Critical Hit that lands rolls a Crit Injury where it hit
+  critInjuryRows: null,           // the table's own Crit Injury rows; null = the built-in table
 };
 // Module mirror of the live table rules so pure compute helpers (computeWeighted)
 // can factor them in without threading the hook through every call site.

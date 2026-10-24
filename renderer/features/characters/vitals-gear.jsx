@@ -19,17 +19,25 @@ import { COLORS, FONTS } from "../../ui/theme.js";
 import { BodyFigure, ItemsEditor, SLOT_POS, TagListEditor } from "./items.jsx";
 import { ResourceTracker, magicRestPatch } from "./magic.jsx";
 import { DeathSavesPanel } from "./stats-tab.jsx";
+import { InjuriesCard, InjuryOverlay } from "./injuries.jsx";
+import { addInjuriesPatch, injuryLine, longRestInjuryPatch, rollLingeringInjury } from "../../engine/injuries.js";
 
 function VitalsTab({ char, set }) {
   const hpPct = char.maxHp ? char.hp / char.maxHp : 1;
   const healthColor = hpPct < 0.25 ? COLORS.red : hpPct < 0.5 ? COLORS.amber : COLORS.blue;
   const v = char.vitals || { exhaustion: 0, food: 3, water: 3, rest: 3 };
   const setV = (patch) => set({ vitals: { ...v, ...patch } });
-  const injuries = char.injuries || [];
-  const [inj, setInj] = useState("");
-  const addInjury = () => { const n = inj.trim(); if (!n) return; set({ injuries: [...injuries, { id: uid(), name: n, location: "", notes: "" }] }); setInj(""); };
-  const updInjury = (id, patch) => set({ injuries: injuries.map(x => x.id === id ? { ...x, ...patch } : x) });
-  const rmInjury = (id) => set({ injuries: injuries.filter(x => x.id !== id) });
+  const [bodyPart, setBodyPart] = useState(null);
+  // Adding Crippled rolls a Lingering Injury onto the body (book p.11).
+  const addStatus = (val) => {
+    const patch = { conditions: [...(char.conditions || []), val] };
+    if (/^crippled\b/i.test(String(val).trim())) {
+      const inj = rollLingeringInjury();
+      Object.assign(patch, addInjuriesPatch(char, [inj]));
+      logSession(`${char.name} is Crippled: ${injuryLine(inj)}`, char.name);
+    }
+    set(patch);
+  };
   // Rests (book Ch.1): Short → regain half max Ki. Long → full HP/Ki/Stamina,
   // refill the Breather pool, reset death saves, drop one Exhaustion, Rest→Fresh.
   const shortRest = () => set({
@@ -51,6 +59,8 @@ function VitalsTab({ char, set }) {
     ...(magicRestPatch(char, "long") || {}),
     ...(resourceRestPatch(char, "long") || {}),
     ...(chargesResetPatch(char, "long") || {}),
+    // A day passes: each Festering Wound takes 1 Maximum HP.
+    ...(() => { const p = longRestInjuryPatch(char); return p ? { ...p, hp: p.maxHp } : {}; })(),
   });
   const card = { background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 12 };
   const head = { fontSize: 10.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 };
@@ -67,9 +77,13 @@ function VitalsTab({ char, set }) {
     </div>
   );
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(220px,280px) 1fr", gap: 18, alignItems: "start" }}>
-      <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4.6", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 12 }}>
-        <BodyFigure stroke={healthColor} />
+    <div className="vitals-grid" style={{ display: "grid", gridTemplateColumns: "minmax(260px,360px) 1fr", gap: 18, alignItems: "start" }}>
+      <div className="vitals-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4.6", background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 12 }}>
+          <BodyFigure stroke={healthColor} />
+          <InjuryOverlay char={char} selected={bodyPart} onSelect={setBodyPart} />
+        </div>
+        <InjuriesCard char={char} set={set} selected={bodyPart} onSelect={setBodyPart} />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={card}>
@@ -150,25 +164,7 @@ function VitalsTab({ char, set }) {
           </div>
         </div>
         <div style={card}>
-          <div style={head}>Injuries</div>
-          {injuries.length === 0 ? <div style={{ fontSize: 11.5, color: COLORS.dim, marginBottom: 8 }}>—</div> : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
-              {injuries.map(x => (
-                <div key={x.id} style={{ display: "flex", gap: 6, alignItems: "center", background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.red}`, borderRadius: 6, padding: "5px 8px" }}>
-                  <TextInput value={x.name} onChange={e => updInjury(x.id, { name: e.target.value })} style={{ flex: 1, fontWeight: 600, color: COLORS.red }} />
-                  <TextInput value={x.notes} onChange={e => updInjury(x.id, { notes: e.target.value })} placeholder="notes" style={{ flex: 1.5, fontSize: 11 }} />
-                  <button onClick={() => rmInjury(x.id)} style={{ background: "transparent", border: "none", color: COLORS.dim, cursor: "pointer" }}><Trash2 size={13}/></button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 6 }}>
-            <TextInput value={inj} onChange={e => setInj(e.target.value)} placeholder="Add an injury…" onKeyDown={e => { if (e.key === "Enter") addInjury(); }} />
-            <Btn size="sm" onClick={addInjury}><Plus size={12}/> Add</Btn>
-          </div>
-        </div>
-        <div style={card}>
-          <TagListEditor label="Status Effects" items={char.conditions || []} onAdd={val => set({ conditions: [...(char.conditions || []), val] })} onRemove={i => set({ conditions: (char.conditions || []).filter((_, j) => j !== i) })} color={COLORS.purple} placeholder="Poisoned, Stunned, Crippled…" />
+          <TagListEditor label="Status Effects" items={char.conditions || []} onAdd={addStatus} onRemove={i => set({ conditions: (char.conditions || []).filter((_, j) => j !== i) })} color={COLORS.purple} placeholder="Poisoned, Stunned, Crippled…" />
         </div>
       </div>
     </div>

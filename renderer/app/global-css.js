@@ -36,6 +36,7 @@ function globalCss() {
       main [style*="grid-template-columns: repeat(6"] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
       main [style*="grid-template-columns: repeat(4"], main [style*="grid-template-columns: repeat(5"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
       main [style*="grid-template-columns: minmax(2"] { grid-template-columns: minmax(0, 1fr) !important; }
+      .vitals-body > :first-child { max-width: 300px; width: 100%; margin: 0 auto; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }

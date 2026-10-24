@@ -10,6 +10,8 @@ import { computeSaveBonus } from "../../engine/skills.js";
 import { computeOverload } from "../../engine/derived.js";
 import { computeAC } from "../../engine/equipment.js";
 import { isCaster } from "../../engine/spellcasting.js";
+import { addInjuriesPatch, injuryLine } from "../../engine/injuries.js";
+import { crippledInjuries } from "./apply.js";
 import { roll, uid } from "../../lib/dice.js";
 import { CURRENT_HOUSE_RULES, envDmgPerTurn, envKiCostMult, useSharedList } from "../../state/hooks.js";
 import { Btn, ConfirmBtn, EmptyState, ErrorBanner, LoadingBlock, Tag, TextInput } from "../../ui/atoms.jsx";
@@ -103,8 +105,12 @@ function InitiativeTab() {
     const kiRank = src && c.sourceType === "player" ? computeKiRank(src) : 1;
     const rounds = tagRounds[c.id] ? Number(tagRounds[c.id]) : defaultRounds(def, { kiRank, inflicterRank: inflicterRank || 1 });
     const entry = { text: def ? def.name : typed, rounds, ...(inflicterRank ? { inflicterRank } : {}) };
-    save({ combatants: data.combatants.map(x => x.id === c.id ? { ...x, conditions: [...x.conditions, entry] } : x) });
-    if (def && def.sheet && src) writeSheet(c, { activeConditions: { ...(src.activeConditions || {}), [def.sheet]: true } });
+    // Crippled rolls a Lingering Injury and puts it on the body.
+    const crip = def && def.name === "Crippled" ? crippledInjuries(1) : null;
+    if (crip) logSession(`${c.name} is Crippled: ${crip.map(injuryLine).join(", ")}`, c.name);
+    const injPatch = crip ? addInjuriesPatch(src || c, crip) : {};
+    save({ combatants: data.combatants.map(x => x.id === c.id ? { ...x, conditions: [...x.conditions, entry], ...injPatch } : x) });
+    if (src && (crip || (def && def.sheet))) writeSheet(c, { ...(def && def.sheet ? { activeConditions: { ...(src.activeConditions || {}), [def.sheet]: true } } : {}), ...injPatch });
     setTagInputs(t => ({ ...t, [c.id]: "" })); setTagRounds(t => ({ ...t, [c.id]: "" })); setTagRanks(t => ({ ...t, [c.id]: "" }));
   };
   const removeCondition = (c, i) => {

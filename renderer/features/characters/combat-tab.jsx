@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { partLabel } from "../../engine/injuries.js";
 import { ChevronDown, ChevronRight, Crosshair, Dices, Flame, Plus, Swords, Trash2, X, Zap } from "lucide-react";
 import { emitRoll } from "../../app/bus.js";
 import { ROLL_MOD_TARGETS, exhaustionPenalty, exhaustionRanks, inKiExhaustion, rollModBonus } from "../../engine/conditions.js";
@@ -149,7 +150,7 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
     setApplying(true);
     const res = await applyToCombatant(pending.id, {
       kind: "damage", amount: pending.amount, saved: factor === "half",
-      ignoreDR: pending.ignoreDR, location: pending.location || "any", by: char.name, what: pending.move,
+      ignoreDR: pending.ignoreDR, location: pending.location || "any", crit: !!pending.crit, by: char.name, what: pending.move,
     });
     setApplying(false);
     setPending(res.ok ? { ...pending, done: res } : { ...pending, error: res.reason });
@@ -365,6 +366,13 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
         <div style={{ background: `${COLORS.amber}12`, border: `1px solid ${COLORS.amber}44`, borderRadius: 8, padding: "7px 12px", fontSize: 12.5 }}>
           <b style={{ color: COLORS.amber }}>Exhaustion {exhaustionRanks(char)}</b>: {exhaustionPenalty(char)} on every d20 roll (already in your rolls), −{5 * exhaustionRanks(char)} ft speed.
           {exhaustionRanks(char) >= 6 ? " Six ranks is death." : " A Long Rest removes one rank."}
+        </div>
+      )}
+      {(char.injuries || []).length > 0 && (
+        <div style={{ background: `${COLORS.red}10`, border: `1px solid ${COLORS.red}44`, borderRadius: 8, padding: "7px 12px", fontSize: 12.5, display: "flex", flexDirection: "column", gap: 3 }}>
+          {(char.injuries || []).map(i => (
+            <div key={i.id}><b style={{ color: i.serious ? COLORS.red : COLORS.amber }}>{i.name}</b> <span style={{ color: COLORS.dim }}>({partLabel(i.location)})</span>{i.effect ? <span style={{ color: COLORS.muted }}>: {i.effect}</span> : null}</div>
+          ))}
         </div>
       )}
       {combatTarget && (

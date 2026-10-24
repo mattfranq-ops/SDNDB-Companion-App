@@ -3,12 +3,59 @@ import { BookOpen, Check, ChevronRight, ClipboardList, FileText, Globe2, Orbit, 
 import { DM_PLAYBOOK } from "../../data/book-tables.js";
 import { HIGH_TECH_PARTS } from "../../data/hightech-data.js";
 import { gravAcclimRanks, gravityColor } from "../../engine/universe.js";
+import { CRIT_INJURIES } from "../../engine/injuries.js";
 import { uid } from "../../lib/dice.js";
 import { attunementCapFor, useHouseRules, useSharedList } from "../../state/hooks.js";
 import { Btn, CommaNumInput, EmptyState, Field, LoadingBlock, ScannerHeader, Tag, TextArea, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
 
 /* ============================== GM TOOLS HUB ============================== */
+// The table's Crit Injury rows: the built-in table until someone edits one.
+const CRIT_GROUPS = [["head", "Head"], ["body", "Body"], ["arms", "Arms"], ["legs", "Legs"]];
+function CritTableEditor({ rows, onChange }) {
+  const list = rows || CRIT_INJURIES;
+  const [group, setGroup] = useState("head");
+  const edit = (idx, patch) => onChange(list.map((r, i) => i === idx ? { ...r, ...patch } : r));
+  const remove = (idx) => onChange(list.filter((_, i) => i !== idx));
+  const addRow = () => {
+    const top = Math.max(0, ...list.filter(r => r.group === group).map(r => r.max || 0));
+    onChange([...list, { group, min: top + 1, max: top + 1, name: "New injury", serious: false, effect: "", heal: "" }]);
+  };
+  const num = { width: 44, textAlign: "center", padding: "4px 2px" };
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {CRIT_GROUPS.map(([k, l]) => <Btn key={k} size="sm" variant={group === k ? "gold" : "default"} onClick={() => setGroup(k)}>{l}</Btn>)}
+        <div style={{ flex: 1 }} />
+        {rows && <Btn size="sm" variant="ghost" onClick={() => onChange(null)} title="Go back to the built-in table">Reset table</Btn>}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {list.map((r, idx) => r.group !== group ? null : (
+          <div key={idx} style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${r.serious ? COLORS.red : COLORS.amber}`, borderRadius: 6, padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+              <TextInput type="number" value={r.min} onChange={e => edit(idx, { min: +e.target.value || 1 })} aria-label="Lowest roll" style={num} />
+              <span style={{ color: COLORS.dim }}>–</span>
+              <TextInput type="number" value={r.max} onChange={e => edit(idx, { max: +e.target.value || 1 })} aria-label="Highest roll" style={num} />
+              <TextInput value={r.name} onChange={e => edit(idx, { name: e.target.value })} aria-label="Injury name" style={{ flex: 1, minWidth: 140, fontWeight: 700 }} />
+              <label style={{ fontSize: 11.5, color: COLORS.muted, display: "flex", gap: 4, alignItems: "center" }}><input type="checkbox" checked={!!r.serious} onChange={e => edit(idx, { serious: e.target.checked })} /> Serious</label>
+              <select value={r.lost || ""} onChange={e => edit(idx, { lost: e.target.value || undefined })} aria-label="Lost part" style={{ background: COLORS.input, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 4, padding: "4px 6px", fontSize: 11.5 }}>
+                <option value="">Nothing lost</option><option value="limb">Limb lost</option><option value="eye">Eye lost</option>
+              </select>
+              <button onClick={() => remove(idx)} aria-label={`Delete ${r.name}`} style={{ background: "transparent", border: "none", color: COLORS.dim, cursor: "pointer", padding: 6 }}><Trash2 size={14} /></button>
+            </div>
+            <TextInput value={r.effect || ""} onChange={e => edit(idx, { effect: e.target.value })} placeholder="What it does" style={{ fontSize: 12 }} />
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <TextInput value={r.heal || ""} onChange={e => edit(idx, { heal: e.target.value })} placeholder="How it heals" style={{ fontSize: 12, flex: 2, minWidth: 160 }} />
+              <TextInput value={(r.adds || []).join(", ")} onChange={e => edit(idx, { adds: e.target.value.split(",").map(x => x.trim()).filter(Boolean) })} placeholder="Conditions it adds (Dazed, Prone…)" style={{ fontSize: 12, flex: 1, minWidth: 140 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <Btn size="sm" onClick={addRow} style={{ marginTop: 8 }}><Plus size={12} /> Add a row</Btn>
+    </div>
+  );
+}
+
 function DmPlaybookTab() {
   const [custom, persist] = useSharedList("custom_playbook_v1");
   const [query, setQuery] = useState("");
@@ -244,6 +291,19 @@ function MateroidsFlavorsTab() {
           <button onClick={() => persist({ quickCombat: !houseRules.quickCombat })} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, borderRadius: 20, padding: "6px 16px", border: `1px solid ${houseRules.quickCombat ? COLORS.gold : COLORS.border}`, background: houseRules.quickCombat ? `${COLORS.gold}1A` : "transparent", color: houseRules.quickCombat ? COLORS.gold : COLORS.muted }}>
             {houseRules.quickCombat ? "On · Quick Combat tab shown" : "Off"}
           </button>
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: 12, color: COLORS.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Crit Injuries</div>
+        <div style={{ fontSize: 11.5, color: COLORS.dim, marginBottom: 12 }}>A Critical Hit that lands rolls an injury where it hit: a d6 table for the head, body, arms and legs. The injury goes on the target's body on the Vitals tab, any condition it causes goes on their tracker row, and serious ones scar when healed. Edit the rows below to run your own alternate crits.</div>
+        <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <button onClick={() => persist({ critInjuries: !houseRules.critInjuries })} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, borderRadius: 20, padding: "6px 16px", border: `1px solid ${houseRules.critInjuries ? COLORS.gold : COLORS.border}`, background: houseRules.critInjuries ? `${COLORS.gold}1A` : "transparent", color: houseRules.critInjuries ? COLORS.gold : COLORS.muted }}>
+              {houseRules.critInjuries ? "On · crits roll injuries" : "Off · crits only deal damage"}
+            </button>
+          </div>
+          {houseRules.critInjuries && <CritTableEditor rows={houseRules.critInjuryRows} onChange={rows => persist({ critInjuryRows: rows })} />}
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 import { logSession } from "../../app/bus.js";
 import { HEALTH_LABEL, damagePatch, healPatch, healthState, resolveDamage, totalDR } from "../../engine/damage.js";
+import { defaultRounds, findCondition } from "../../engine/conditions.js";
+import { addInjuriesPatch, injuryLine, rollCritInjury, rollLingeringInjury } from "../../engine/injuries.js";
 
 /* ===== Apply a hit or a heal to someone in the initiative tracker =====
    Used from the tracker rows and from a sheet's roll log (after a targeted
@@ -13,7 +15,7 @@ import { HEALTH_LABEL, damagePatch, healPatch, healthState, resolveDamage, total
 const SOURCE_KEY = { player: "characters_v2", npc: "npcs_v2" };
 // Fields a hit can change; mirrored onto the tracker row so unlinked and
 // linked rows read the same way.
-const MIRROR = ["hp", "ki", "temp", "deathSaves", "dead", "stable"];
+const MIRROR = ["hp", "ki", "temp", "deathSaves", "dead", "stable", "injuries"];
 
 async function readDoc(key) {
   try { const r = await window.storage.get(key, true); return r ? JSON.parse(r.value) : null; } catch { return null; }
@@ -31,8 +33,10 @@ function targetDR(type, src, row, location) {
 
 // opts: { kind: "damage" | "heal", amount, pool: "hp" | "ki", destruction,
 //         resist: "none" | "resist" | "vuln" | "immune", saved, block,
-//         ignoreDR, location (hit location key, default "any"),
+//         ignoreDR, location (hit location key, default "any"), crit,
 //         by (attacker name), what (move name) }
+// A Critical Hit that does HP damage rolls a Crit Injury where it landed
+// (house rule `critInjuries`, on by default).
 async function applyToCombatant(combatantId, opts) {
   const doc = await readDoc("session_combat");
   const data = doc && doc[0];
@@ -65,9 +69,20 @@ async function applyToCombatant(combatantId, opts) {
     if (d.patch.deathSaves) steps.push(d.patch.dead ? "third Death Save failure" : "+2 Death Save failures");
   }
 
+  let injury = null, rowConditions = null;
+  if (opts.kind !== "heal" && opts.crit && pool === "hp" && amount > 0) {
+    const hr = { critInjuries: true, ...((await readDoc("house_rules")) || {}) };
+    if (hr.critInjuries) injury = rollCritInjury({ location: opts.location || "any", rows: hr.critInjuryRows || undefined, rng: opts.rng });
+    if (injury) {
+      Object.assign(patch, addInjuriesPatch(target, [injury]));
+      steps.push(`Crit Injury: ${injuryLine(injury)}`);
+      if (injury.adds) rowConditions = conditionEntries(injury.adds, injury.rounds);
+    }
+  }
+
   if (src) await writeDoc(key, list.map(e => e.id === src.id ? { ...e, ...patch } : e));
   const mirror = Object.fromEntries(MIRROR.filter(k => k in patch).map(k => [k, patch[k]]));
-  await writeDoc("session_combat", [{ ...data, combatants: data.combatants.map(c => c.id === row.id ? { ...c, ...mirror } : c) }]);
+  await writeDoc("session_combat", [{ ...data, combatants: data.combatants.map(c => c.id === row.id ? { ...c, ...mirror, ...(rowConditions ? { conditions: [...(c.conditions || []), ...rowConditions] } : {}) } : c) }]);
 
   const after = { ...target, ...patch };
   const state = pool === "hp" ? healthState(after.hp, after.maxHp) : null;
@@ -78,7 +93,17 @@ async function applyToCombatant(combatantId, opts) {
   const tail = [steps.length ? steps.join(", ") : "", state ? HEALTH_LABEL[state] : "", after.dead && !target.dead ? "DEAD" : ""].filter(Boolean).join(" · ");
   logSession(`${lead}${row.name} ${verb}${shown}${tail ? ` · ${tail}` : ""}`, opts.by || row.name);
 
-  return { ok: true, kind: opts.kind, amount, steps, state, name: row.name };
+  return { ok: true, kind: opts.kind, amount, steps, state, name: row.name, injury };
 }
 
-export { applyToCombatant };
+// Tracker condition entries for the conditions an injury inflicts.
+function conditionEntries(names, rounds) {
+  return names.map(n => { const def = findCondition(n); return { text: def ? def.name : n, rounds: rounds ?? defaultRounds(def) }; });
+}
+
+// Crippled: one Lingering Injury per rank gained, placed on the body.
+function crippledInjuries(ranks = 1, location = "any", rng = Math.random) {
+  return Array.from({ length: Math.max(1, ranks) }, () => rollLingeringInjury({ location, rng }));
+}
+
+export { applyToCombatant, conditionEntries, crippledInjuries };

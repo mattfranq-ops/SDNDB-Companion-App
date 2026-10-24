@@ -4,6 +4,21 @@
 
 Everything from 1.13.2 still works the same way, and existing tables load unchanged.
 
+**Injuries on the body**
+- The Vitals tab's body model shows every injury where it is. A pulsing mark means an open
+  injury. A lost arm, leg or tail is cut off the figure, and a lost eye gets a patch. Tap a body
+  part to see only what's there.
+- Healing a serious injury leaves a stitched scar on that spot, and the scar stays on the model.
+- Injuries track themselves:
+  - Adding Crippled rolls the book's Lingering Injury table and places the result.
+  - A Critical Hit that lands rolls a Crit Injury where it hit, from the sheet's Apply button or
+    the tracker's damage panel (Crit chip). Any condition the injury causes goes on the tracker row.
+  - Each Long Rest, a Festering Wound takes 1 Maximum HP. Healing it gives the HP back.
+- The Combat tab pins active injuries and their effects at the top.
+- **Crit Injuries** is a house rule (GM Tools → Materoids Flavors), on by default. It has a d6
+  table each for the head, body, arms and legs. Every row can be edited, so a table can run its
+  own alternate crits.
+
 **Combat that runs itself** (after comparing the app with the Cyberpunk RED Companion; see
 `5.0` Ch.1 for the rules)
 - A hit on a tracker target now offers **Apply to target**: DR (capped at Proficiency Bonus + 1),
