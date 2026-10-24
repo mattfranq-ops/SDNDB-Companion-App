@@ -169,9 +169,11 @@ function CombatRefTab({ char, set, combatTarget, onClearTarget }) {
   const heldWeapons = equippedEntries(char).filter(e => (e.slotKey === "hand1" || e.slotKey === "hand2") && e.item.damageDice);
   const weaponMoves = heldWeapons.map(e => {
     const mod = statMod(char, e.item.attackStat || "str");
-    const dice = /[+-]\s*\d+\s*$/.test(e.item.damageDice) ? e.item.damageDice : `${e.item.damageDice}${mod >= 0 ? "+" : ""}${mod}`;
+    const mb = e.item.magicBonus || 0; // an enchanted weapon's Magical Bonus hits and hurts harder
+    const dmgMod = mod + mb;
+    const dice = /[+-]\s*\d+\s*$/.test(e.item.damageDice) ? e.item.damageDice : `${e.item.damageDice}${dmgMod >= 0 ? "+" : ""}${dmgMod}`;
     const melee = !/ranged|bow|gun|rifle|pistol|throw/i.test(`${e.item.category} ${e.item.name}`);
-    return { uid: `wpn-${e.item.id}`, name: e.item.name, techType: "Armed", resolution: "attack", damageDice: dice, kiCost: "", atkOverride: profB + mod, melee };
+    return { uid: `wpn-${e.item.id}`, name: mb ? `${e.item.name} +${mb}` : e.item.name, techType: "Armed", resolution: "attack", damageDice: dice, kiCost: "", atkOverride: profB + mod + mb, melee };
   });
   const basicMoves = [
     ...(weaponMoves.length ? weaponMoves : [{ uid: "cqc", name: unarmed.style ? `Unarmed Strike (${unarmed.style})` : "CQC (Unarmed Strike)", techType: "Unarmed", resolution: "attack", damageDice: `${unarmed.strikeDie}${strMod>=0?"+":""}${strMod}`, kiCost: "", atkOverride: profB + strMod + benefitsOfPower(char).energy, melee: true }]),

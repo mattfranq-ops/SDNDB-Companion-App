@@ -4,6 +4,31 @@
 
 Everything from 1.13.2 still works the same way, and existing tables load unchanged.
 
+**Crafting, the base and the garage do real things**
+- A **Crafting** tab on every sheet runs the book's Downtime making activities (Ch.5), each
+  spending Downtime Points: **Craft** any gear, armor, weapon, vehicle or mech (and Scientific
+  Marvels once invented) with its toolkit, paying 85% of the price, less for higher rolls;
+  **Gather Materials** for a discount on the next craft; **Invent** Marvels; **Enchant** a
+  weapon or armor (+1 to +3 and a book Enchantment) and **Improve** it later for half price;
+  **Cook** a meal that gives the cook and anyone fed Temporary HP, Ki and Stamina; and **Train**
+  in a Gravity Chamber to raise Accustomed Gravity. Every result lands on the sheet and in the
+  Session log, and the app can roll or take your physical d20.
+- Enchanted weapons add their bonus to attack and damage on the Combat tab, and enchanted armor
+  and shields add it to AC.
+- Every base facility now has numbers at each tier, shown on its card and in a "Working for the
+  party now" panel, and they apply while the party is there (set Home World, Capital Ship or
+  Away on the Base tab): the Workshop cuts crafting costs and adds to Crafting and Invent checks,
+  the Med Bay restores Hit Dice, Exhaustion and injuries on a Long Rest, the Ki Reactor adds Ki
+  on rests, the War Room adds to the party's initiative, the Comms Array and Black Market help
+  Gather Materials, the Gravity Chamber and Training Grounds add Training Boons, and the Trade
+  Hub discounts stores on the home world. New Shield Generator and Defense Grid facilities add
+  Shields and Hardness, and the grid's turrets can fire from the Base tab.
+- A **Garage** on the Base tab lists every vehicle and mech the party owns with its book
+  statblock. Vehicles take damage and collect Dings, get repaired (10% of the price per Ding,
+  cheaper with a Hangar or Workshop, paid from the owner's Zeni), take upgrades (plating, frame,
+  boosters, cannon, shield emitter), Tier Up mechs, and deploy to the initiative tracker. Hits
+  in the tracker carry back to the vehicle.
+
 **Phone feel and reliability**
 - On a phone, the header and page banners shrink. The sheet's tabs scroll sideways, and HP, Ki and
   Stamina stay pinned under the app bar while the sheet scrolls. The map handle is now a round

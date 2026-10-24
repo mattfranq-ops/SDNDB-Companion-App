@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { HeartPulse, Minus, Plus, RotateCcw, Trash2, X, Zap } from "lucide-react";
 import { rarityInfo } from "../../data/book-tables.js";
 import { CYBERNETICS_RULES, HIGH_TECH_PARTS } from "../../data/hightech-data.js";
-import { logSession } from "../../app/bus.js";
+import { logSession, notify } from "../../app/bus.js";
+import { restBonusPatch } from "../../engine/base.js";
+import { useBase } from "../../state/base-state.js";
 import { consumeItem } from "../../engine/consumables.js";
-import { charTotalLevel } from "../../engine/core.js";
+import { charTotalLevel, computeKiRank } from "../../engine/core.js";
 import { cyberneticKiControlPenalty, cyberneticLimit, cyberneticsExempt, cyberneticsUsed, hasCybernetic, installedParts, isAndroidBody, partIsAdvanced } from "../../engine/cybernetics.js";
 import { computeAttacksPerTurn } from "../../engine/derived.js";
 import { EQUIP_SLOTS, computeAC, computeArmorDR, computeWeighted, equippedEntries, normalizeItem, slotTypeLabel, weightMultiplier } from "../../engine/equipment.js";
@@ -20,7 +22,7 @@ import { BodyFigure, ItemsEditor, SLOT_POS, TagListEditor } from "./items.jsx";
 import { ResourceTracker, magicRestPatch } from "./magic.jsx";
 import { DeathSavesPanel } from "./stats-tab.jsx";
 import { InjuriesCard, InjuryOverlay } from "./injuries.jsx";
-import { addInjuriesPatch, injuryLine, longRestInjuryPatch, rollLingeringInjury } from "../../engine/injuries.js";
+import { addInjuriesPatch, healInjuryPatch, injuryLine, longRestInjuryPatch, rollLingeringInjury } from "../../engine/injuries.js";
 
 function VitalsTab({ char, set }) {
   const hpPct = char.maxHp ? char.hp / char.maxHp : 1;
@@ -40,6 +42,13 @@ function VitalsTab({ char, set }) {
   };
   // Rests (book Ch.1): Short → regain half max Ki. Long → full HP/Ki/Stamina,
   // refill the Breather pool, reset death saves, drop one Exhaustion, Rest→Fresh.
+  // The party base adds to rests taken there (engine/base.js restBonusPatch).
+  const { bonuses } = useBase();
+  const restBonus = (c, kind) => {
+    const r = restBonusPatch(c, bonuses, kind, { kiRank: computeKiRank(char) || 1, heal: healInjuryPatch });
+    if (r.notes.length) { logSession(`${char.name} rests at the base: ${r.notes.join(" · ")}`, char.name); notify(r.notes.join(" · ")); }
+    return r.patch;
+  };
   const shortRest = () => set({
     ki: Math.min(char.maxKi || 0, (char.ki || 0) + Math.floor((char.maxKi || 0) / 2)),
     ...(magicRestPatch(char, "short") || {}),
@@ -47,21 +56,29 @@ function VitalsTab({ char, set }) {
     ...(chargesResetPatch(char, "short") || {}),
     // Stamina Engine (High-Tech Part): the Breather Pool refills on a Short Rest.
     ...(hasCybernetic(char, "stamina-engine") ? { breatherPool: null } : {}),
+    ...restBonus(char, "short"),
   });
-  const longRest = () => set({
-    hp: char.maxHp || 0, ki: char.maxKi || 0, stamina: char.maxStamina || 0,
-    breatherPool: null, deathSaves: { success: 0, fail: 0 }, consumablesUsed: {},
-    vitals: { ...v, exhaustion: Math.max(0, (v.exhaustion || 0) - 1), rest: 3 },
-    // Regain half your Hit Dice (min 1, 5e rule); temp pools expire; God Ki refills.
-    hitDiceUsed: Math.max(0, (char.hitDiceUsed || 0) - Math.max(1, Math.floor(charTotalLevel(char) / 2))),
-    temp: { hp: 0, ki: 0, stamina: 0 },
-    godKi: { ...(char.godKi || { max: 0 }), current: (char.godKi || {}).max || 0, temp: 0 },
-    ...(magicRestPatch(char, "long") || {}),
-    ...(resourceRestPatch(char, "long") || {}),
-    ...(chargesResetPatch(char, "long") || {}),
+  const longRest = () => {
     // A day passes: each Festering Wound takes 1 Maximum HP.
-    ...(() => { const p = longRestInjuryPatch(char); return p ? { ...p, hp: p.maxHp } : {}; })(),
-  });
+    const fester = longRestInjuryPatch(char) || {};
+    const bonus = restBonus({ ...char, ...fester }, "long");
+    const maxHp = bonus.maxHp ?? fester.maxHp ?? char.maxHp ?? 0;
+    set({
+      hp: maxHp, ki: char.maxKi || 0, stamina: char.maxStamina || 0,
+      breatherPool: null, deathSaves: { success: 0, fail: 0 }, consumablesUsed: {},
+      vitals: { ...v, exhaustion: Math.max(0, (v.exhaustion || 0) - 1), rest: 3 },
+      // Regain half your Hit Dice (min 1, 5e rule); temp pools expire; God Ki refills.
+      hitDiceUsed: Math.max(0, (char.hitDiceUsed || 0) - Math.max(1, Math.floor(charTotalLevel(char) / 2))),
+      temp: { hp: 0, ki: 0, stamina: 0 },
+      godKi: { ...(char.godKi || { max: 0 }), current: (char.godKi || {}).max || 0, temp: 0 },
+      ...(magicRestPatch(char, "long") || {}),
+      ...(resourceRestPatch(char, "long") || {}),
+      ...(chargesResetPatch(char, "long") || {}),
+      ...fester,
+      ...bonus,
+      maxHp, hp: maxHp,
+    });
+  };
   const card = { background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 12 };
   const head = { fontSize: 10.5, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 };
   const stepper = (label, val, on, max, words) => (

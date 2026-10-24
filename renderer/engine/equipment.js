@@ -64,7 +64,8 @@ function equippedEntries(char) {
 function computeAC(char) {
   const eq = equippedEntries(char);
   const body = eq.find(e => e.slotKey === "body" && (e.item.acBase || 0) > 0)?.item || null;
-  const bonus = eq.reduce((s, e) => s + (e.item.acBonus || 0), 0);
+  // An enchanted armor or shield adds its Magical Bonus (Ch.5 Enchanting).
+  const bonus = eq.reduce((s, e) => s + (e.item.acBonus || 0) + ((e.item.acBase || e.item.acBonus) ? (e.item.magicBonus || 0) : 0), 0);
   const tough = benefitsOfPower(char).toughness; // Toughness Bonus: +1/rank to AC
   const styleAc = styleFlatMod(char, "ac");
   const extra = bonus + tough + styleAc;
@@ -173,6 +174,10 @@ function normalizeItem(it) {
     ...(it.weaponGroup ? { weaponGroup: it.weaponGroup } : {}), ...(it.weight ? { weight: it.weight } : {}),
     ...(it.restore ? { restore: it.restore } : {}), ...(it.exhaustionAfterFirst ? { exhaustionAfterFirst: it.exhaustionAfterFirst } : {}),
     ...(it.oncePerLongRest ? { oncePerLongRest: true } : {}),
+    // crafted and enchanted gear (Ch.5) and vehicle state (engine/vehicles.js)
+    ...(it.magicBonus ? { magicBonus: it.magicBonus } : {}),
+    ...(Array.isArray(it.enchantments) && it.enchantments.length ? { enchantments: it.enchantments } : {}),
+    ...(it.vehicle ? { vehicle: it.vehicle } : {}), ...(it.crafted ? { crafted: it.crafted } : {}),
     // named conditions/effects this item grants (descriptive for now)
     effects: Array.isArray(it.effects) ? it.effects.map(e => ({ id: e.id || uid(), name: e.name || "", description: e.description || "" })) : [],
     // Ability Score changes while equipped — see effectiveStats().

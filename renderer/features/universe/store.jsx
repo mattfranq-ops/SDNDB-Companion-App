@@ -8,6 +8,7 @@ import { BOOK_EQUIPMENT, EQUIP_SLOTS, slotTypeLabel } from "../../engine/equipme
 import { UNI_TECH, ensureGalaxyLayout } from "../../engine/universe.js";
 import { uid } from "../../lib/dice.js";
 import { useSharedList } from "../../state/hooks.js";
+import { useBase } from "../../state/base-state.js";
 import { Btn, EmptyState, ErrorBanner, LoadingBlock, ScannerHeader, Select, Tag, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
 import { GalaxyForge, GalaxyMap } from "./galaxy-views.jsx";
@@ -36,9 +37,10 @@ const planetTechIdx = (planet) => Math.max(0, UNI_TECH.indexOf(planet?.tech));
 const planetOpen = (planet) => !!planet && !!planet.economy && planet.economy !== "Uninhabited" && planet.population !== "Uninhabited";
 const wealthRarityCap = (planet) => [0, 1, 2, 3, 5][Math.max(0, Math.min(4, planet?.wealthIdx ?? 2))];
 const techNeeded = (zeni) => zeni <= 100 ? 0 : zeni <= 1000 ? 1 : zeni <= 5000 ? 2 : 3;
-function storePrice(base, planet, kind) {
+// discountPct: the party's Trade Hub, on the home world only.
+function storePrice(base, planet, kind, discountPct = 0) {
   const mult = kind === "hightech" || kind === "tech" ? storeEcon(planet).tech : storeEcon(planet).armor;
-  return Math.max(1, Math.round((base || 0) * mult * (1 + (planet?.taxRate || 0) / 100)));
+  return Math.max(1, Math.round((base || 0) * mult * (1 + (planet?.taxRate || 0) / 100) * (1 - discountPct / 100)));
 }
 // Ch.9 technology with a price: Scientific Marvels, Mechs and Vehicles.
 const TECH_FOR_SALE = GEAR_RULES.filter(r => r.zeni && ["Scientific Marvels", "Mechs", "Vehicles"].includes(r.section));
@@ -217,6 +219,7 @@ function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLoc
   const [custom] = useSharedList("custom_hightech_v1");
   const [group, setGroup] = useState("All");
   const [query, setQuery] = useState("");
+  const { bonuses } = useBase();
   if (!galaxy) return <EmptyState icon={Coins} title="No galaxy charted yet" body="Forge a galaxy first — the Store prices gear by the planet you're standing on." />;
   const catalog = buildStoreCatalog(custom || []);
   const shopper = chars.find(c => c.id === shopperId) || null;
@@ -232,9 +235,11 @@ function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLoc
   if (!planetOpen(planet)) return <div>{header}<EmptyState icon={Coins} title="No market here" body={`${planet.name} is uninhabited — no vendors. Set a populated world as your location.`} /></div>;
   const stock = storeStock(planet, catalog).filter(i => !query || `${i.name} ${i.category || ""} ${i.properties || ""}`.toLowerCase().includes(query.toLowerCase()));
   const shown = group === "All" ? STORE_GROUPS : [group];
+  const homeDiscount = planet.id === galaxy.partyHomePlanetId ? (bonuses.storeDiscount || 0) : 0;
   return (
     <div>
       {header}
+      {homeDiscount > 0 && <div style={{ fontSize: 12, color: COLORS.green, marginBottom: 10 }}>Your Trade Hub takes {homeDiscount}% off everything on your home world.</div>}
       {cartBar}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         {["All", ...STORE_GROUPS].map(g => (
@@ -250,7 +255,7 @@ function StoreScreen({ galaxy, current, chars, shopperId, setShopperId, onSetLoc
             <div style={{ fontSize: 12, color: COLORS.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>{g}</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 10 }}>
               {items.map(it => {
-                const price = storePrice(it.zeni, planet, it.kind);
+                const price = storePrice(it.zeni, planet, it.kind, homeDiscount);
                 const canBuy = !!shopper && (shopper.zeni || 0) >= price;
                 return <StoreItemCard key={it.catalogId || it.name} item={it} price={price} base={price !== it.zeni ? it.zeni : null} canBuy={canBuy} reason={!shopper ? "Pick who's shopping" : "Not enough Ƶeni"} onBuy={() => onBuy(it, price)} onAdd={() => addToCart(it, price)} inCart={inCart(it, price)} />;
               })}

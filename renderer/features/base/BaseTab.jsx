@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Building2, Coins, Crosshair, Crown, HeartPulse, Minus, Plus, Radio, Rocket, Skull, Sparkles, Swords, TrendingUp, Users, Weight, Wrench, X, Zap } from "lucide-react";
+import { Building2, Coins, Crosshair, Crown, HeartPulse, MapPin, Minus, Plus, Radio, Rocket, Shield, ShieldHalf, Skull, Sparkles, Swords, TrendingUp, Users, Weight, Wrench, X, Zap } from "lucide-react";
+import { baseBonuses, effectLines, effectiveDefenses, facilityEffect } from "../../engine/base.js";
+import { PARTY_AT, normalizeBase } from "../../state/base-state.js";
+import { Garage } from "./garage.jsx";
 import { UNI_STABILITY, UNI_WEALTH } from "../../engine/universe.js";
-import { uid } from "../../lib/dice.js";
+import { emitRoll, logSession } from "../../app/bus.js";
+import { rollAmount } from "../../engine/consumables.js";
+import { roll, uid } from "../../lib/dice.js";
 import { useHouseRules, useSharedList } from "../../state/hooks.js";
 import { Btn, LoadingBlock, ScannerHeader, Tag, TextInput } from "../../ui/atoms.jsx";
 import { COLORS, FONTS } from "../../ui/theme.js";
@@ -26,6 +31,8 @@ const BASE_FACILITIES = [
   { type: "hangar",   name: "Hangar",           icon: Rocket,     color: COLORS.blue,   ship: false, desc: "Dock and service the capital ship and smaller craft.", perLevel: "Faster ship repairs", tiers: ["Landing Pad", "Hangar", "Fleet Yard"] },
   { type: "market",   name: "Trade Hub",        icon: Coins,      color: COLORS.gold,   ship: false, desc: "A home market that generates Zeni and cheap goods.", perLevel: "More Zeni income", tiers: ["Trading Post", "Trade Hub", "Grand Exchange"] },
   { type: "blackmarket", name: "Black Market",  icon: Skull,      color: COLORS.red,    ship: false, desc: "A 'legal' underground market. Fat profits, but the people whisper of corruption.", perLevel: "More Zeni & Loot, less Stability & Reputation", tiers: ["Back-Alley Deals", "Undermarket", "Shadow Exchange"] },
+  { type: "shieldgen", name: "Shield Generator", icon: Shield,    color: COLORS.blue,   ship: true,  desc: "Projects an energy barrier that soaks hits before the hull takes them.", perLevel: "More Shields", tiers: ["Barrier Node", "Shield Generator", "Aegis Dome"] },
+  { type: "defense",  name: "Defense Grid",     icon: ShieldHalf, color: COLORS.amber,  ship: true,  desc: "Armored walls and, later, turrets that fire on attackers.", perLevel: "More Hardness, then turrets", tiers: ["Reinforced Walls", "Turret Line", "Fortress Batteries"] },
 ];
 const baseFacility = (type) => BASE_FACILITIES.find(f => f.type === type);
 // Per-level governance effect of a facility (More Governing). Helpful ones lift the
@@ -75,6 +82,19 @@ function ResourceLedger({ resources, onChange }) {
 }
 const SHIP_BAYS = 4;   // a capital ship only has room for so many amenities
 
+// What a facility does at its tier, and what the next tier adds.
+function FacilityEffects({ type, level }) {
+  const now = effectLines(facilityEffect(type, level));
+  const next = level < FACILITY_MAX_TIER ? effectLines(facilityEffect(type, level + 1)).filter(l => !now.includes(l)) : [];
+  if (!now.length && !next.length) return null;
+  return (
+    <div style={{ marginBottom: 8 }}>
+      {now.map((l, i) => <div key={i} style={{ fontSize: 11, color: COLORS.green, lineHeight: 1.45 }}>• {l}</div>)}
+      {next.length > 0 && <div style={{ fontSize: 10.5, color: COLORS.dim, marginTop: 3 }}>Next tier: {next.join("; ")}</div>}
+    </div>
+  );
+}
+
 // One buildable/upgradeable facility grid, shared by the home base and the ship.
 function FacilitySection({ label, Icon, color, locationNode, extra, facilities, capacity, open, onToggle, onAdd, onUpgrade, onDowngrade, onRename, onRemove, resources }) {
   const built = new Set(facilities.map(f => f.type));
@@ -100,6 +120,7 @@ function FacilitySection({ label, Icon, color, locationNode, extra, facilities, 
               onMouseEnter={e => { if (afford) e.currentTarget.style.borderColor = f.color + "88"; }} onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}><f.icon size={15} color={f.color} /><span style={{ fontWeight: 700, fontSize: 12.5 }}>{(f.tiers && f.tiers[0]) || f.name}</span></div>
               <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{f.desc}</div>
+              {effectLines(facilityEffect(f.type, 1)).map((l, i) => <div key={i} style={{ fontSize: 10.5, color: COLORS.green, marginTop: 3 }}>• {l}</div>)}
               <div style={{ fontSize: 10, color: afford ? COLORS.gold : COLORS.red, marginTop: 5, fontFamily: FONTS.mono }}>Build: {costLabel(cost)}</div>
             </div>
           ); })}
@@ -122,7 +143,8 @@ function FacilitySection({ label, Icon, color, locationNode, extra, facilities, 
                 <X size={14} color={COLORS.red} style={{ cursor: "pointer" }} title="Demolish" onClick={() => onRemove(f.id)} />
               </div>
               <div style={{ fontSize: 10, color: COLORS.dim, marginBottom: 6 }}>{def.name}{f.customName ? "" : ` · Tier ${lvl}`}</div>
-              <div style={{ fontSize: 11.5, color: COLORS.muted, marginBottom: 8 }}>{def.desc}</div>
+              <div style={{ fontSize: 11.5, color: COLORS.muted, marginBottom: 6 }}>{def.desc}</div>
+              <FacilityEffects type={f.type} level={lvl} />
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 10, color: maxed ? COLORS.gold : (canUp ? COLORS.gold : COLORS.red), flex: 1, fontFamily: FONTS.mono }}>{maxed ? "Max tier" : `Upgrade: ${costLabel(upCost)}`}</span>
                 <button onClick={() => onDowngrade(f.id)} disabled={lvl <= 1} title="Downgrade" style={{ ...miniBtnStyle, opacity: lvl <= 1 ? 0.4 : 1 }}><Minus size={13} /></button>
@@ -138,8 +160,17 @@ function FacilitySection({ label, Icon, color, locationNode, extra, facilities, 
 
 // Made-up defense rules: incoming damage minus Hardness, absorbed by Shields, then
 // eats Structural Integrity. At 0 SI the base/ship is breached. All values editable.
-function BaseStatBlock({ stats, onChange, noun = "base" }) {
-  const maxSi = stats.maxSi ?? 60, maxSh = stats.maxShields ?? 0, hard = stats.hardness ?? 0;
+// The Defense Grid's turrets roll an attack and damage into the Session log.
+function fireTurret(t, noun) {
+  const d20 = roll(20), dmg = rollAmount(t.dice).total;
+  const crit = d20 === 20;
+  const total = crit ? dmg + rollAmount(t.dice).total : dmg;
+  emitRoll({ label: `The ${noun}'s turrets`, total: d20 + t.toHit, detail: `d20 ${d20} +${t.toHit} to hit · ${total} ${t.type}${crit ? " (crit)" : ""}`, color: COLORS.amber, share: true, who: "Base" });
+  logSession(`The ${noun}'s turrets fire: ${d20 + t.toHit} to hit, ${total} ${t.type} damage${crit ? " (critical)" : ""}`, "Base");
+}
+function BaseStatBlock({ stats, onChange, noun = "base", facilities = [], extraActions = null }) {
+  const eff = effectiveDefenses(stats, facilities);
+  const maxSi = eff.maxSi, maxSh = eff.maxShields, hard = eff.hardness;
   const si = stats.si ?? maxSi, sh = stats.shields ?? maxSh;
   const [amt, setAmt] = useState("");
   const patch = (p) => onChange({ ...stats, ...p });
@@ -168,18 +199,27 @@ function BaseStatBlock({ stats, onChange, noun = "base" }) {
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <span style={{ fontSize: 10.5, color: COLORS.muted }}>Hardness</span>
-        <TextInput type="number" value={hard} onChange={e => patch({ hardness: Math.max(0, +e.target.value || 0) })} style={{ width: 50, textAlign: "center", padding: "4px 6px" }} title="Flat reduction on each incoming hit" />
+        <TextInput type="number" value={stats.hardness ?? 0} onChange={e => patch({ hardness: Math.max(0, +e.target.value || 0) })} style={{ width: 50, textAlign: "center", padding: "4px 6px" }} title="Flat reduction on each incoming hit (before facilities)" />
+        {eff.bonusHardness > 0 && <span style={{ fontSize: 10.5, color: COLORS.green, fontFamily: FONTS.mono }} title="From the Defense Grid">+{eff.bonusHardness} = {hard}</span>}
         <div style={{ flex: 1 }} />
         <TextInput type="number" value={amt} onChange={e => setAmt(e.target.value)} placeholder="amt" style={{ width: 60, textAlign: "center", padding: "4px 6px" }} />
         <Btn size="sm" variant="danger" onClick={applyDamage}>Damage</Btn>
         <Btn size="sm" variant="ghost" onClick={repair}>Repair</Btn>
         {maxSh > 0 && <Btn size="sm" variant="ghost" onClick={() => patch({ shields: maxSh })} title="Restore shields to full">Recharge</Btn>}
+        {extraActions}
       </div>
+      {(eff.bonusShields > 0 || eff.turret) && (
+        <div style={{ fontSize: 11, color: COLORS.green, marginTop: 6, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {eff.bonusShields > 0 && <span>+{eff.bonusShields} Shields from the Shield Generator</span>}
+          {eff.turret && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>Turrets: +{eff.turret.toHit} to hit, {eff.turret.dice} {eff.turret.type}, {eff.turret.range}
+            <Btn size="sm" variant="ghost" onClick={() => fireTurret(eff.turret, noun)}><Crosshair size={12} /> Fire</Btn></span>}
+        </div>
+      )}
       <details style={{ marginTop: 8 }}>
         <summary style={{ fontSize: 10.5, color: COLORS.dim, cursor: "pointer" }}>Set max integrity / shields</summary>
         <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
           <label style={{ fontSize: 10, color: COLORS.muted, display: "flex", alignItems: "center", gap: 5 }}>Max SI <TextInput type="number" value={maxSi} onChange={e => patch({ maxSi: Math.max(0, +e.target.value || 0) })} style={{ width: 64, padding: "3px 6px" }} /></label>
-          <label style={{ fontSize: 10, color: COLORS.muted, display: "flex", alignItems: "center", gap: 5 }}>Max Shields <TextInput type="number" value={maxSh} onChange={e => patch({ maxShields: Math.max(0, +e.target.value || 0) })} style={{ width: 64, padding: "3px 6px" }} /></label>
+          <label style={{ fontSize: 10, color: COLORS.muted, display: "flex", alignItems: "center", gap: 5 }}>Max Shields <TextInput type="number" value={stats.maxShields ?? 0} onChange={e => patch({ maxShields: Math.max(0, +e.target.value || 0) })} style={{ width: 64, padding: "3px 6px" }} /></label>
         </div>
       </details>
       {breached && <div style={{ fontSize: 11, color: COLORS.red, fontWeight: 700, marginTop: 6 }}>Integrity breached — the {noun} is overrun. Repair to bring it back online.</div>}
@@ -262,6 +302,31 @@ function GovernancePanel({ base, planet, onChange }) {
   );
 }
 
+// Everything the base is doing for the party right now, by facility.
+function ActiveBonuses({ base }) {
+  const b = baseBonuses(base, { enabled: true });
+  const where = (PARTY_AT.find(([k]) => k === b.where) || [, "Away"])[1];
+  return (
+    <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.green}44`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <Sparkles size={16} color={COLORS.green} />
+        <span style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 14 }}>Working for the party now</span>
+        <Tag color={COLORS.gold}>{where}</Tag>
+      </div>
+      {b.sources.length === 0 ? <div style={{ fontSize: 12, color: COLORS.dim }}>Nothing yet. Build facilities, then set where the party is.</div> : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 8 }}>
+          {b.sources.map((src, i) => { const def = baseFacility(src.type); if (!def) return null; return (
+            <div key={i} style={{ background: COLORS.panel2, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}><def.icon size={13} color={def.color} /><b style={{ fontSize: 12 }}>{def.tiers[src.level - 1] || def.name}</b><span style={{ fontSize: 10, color: COLORS.dim }}>{src.loc === "ship" ? "ship" : "home"}</span></div>
+              {src.lines.map((l, j) => <div key={j} style={{ fontSize: 11, color: COLORS.muted }}>• {l}</div>)}
+            </div>
+          ); })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BaseTab() {
   const [state, persist] = useSharedList("party_base");
   const [universe] = useSharedList("universe");
@@ -287,14 +352,9 @@ function BaseTab() {
     }]);
   }, [nowAbs, moreGoverning]);
   if (state === null) return <LoadingBlock />;
-  const raw = (state && state[0]) || {};
-  const base = {
-    factionName: raw.factionName || "",
-    resources: { zeni: 0, loot: 0, ...(raw.resources || {}) },
-    home: { facilities: [], maxSi: 80, maxShields: 40, hardness: 5, ...(raw.home || (raw.facilities ? { facilities: raw.facilities } : {})) },
-    ship: { name: "", facilities: [], maxSi: 50, maxShields: 30, hardness: 5, ...(raw.ship || {}) },
-  };
-  const save = (patch) => persist([{ factionName: base.factionName, resources: base.resources, home: base.home, ship: base.ship, ...patch }]);
+  const base = normalizeBase(state && state[0]);
+  // Keep every field (gov, partyAt…) and drop the pre-ship flat list.
+  const save = (patch) => { const { facilities: _old, ...rest } = base; persist([{ ...rest, ...patch }]); };
   const upd = (which, patch) => save({ [which]: { ...base[which], ...patch } });
   const setRes = (patch) => save({ resources: { ...base.resources, ...patch } });
   const listOf = (which) => base[which].facilities || [];
@@ -317,6 +377,13 @@ function BaseTab() {
   const home = galaxy && galaxy.partyHomePlanetId ? galaxy.systems.flatMap(s => s.planets.map(p => ({ s, p }))).find(x => x.p.id === galaxy.partyHomePlanetId) : null;
   const shipSys = galaxy && galaxy.currentPlanetId ? galaxy.systems.find(s => s.planets.some(p => p.id === galaxy.currentPlanetId)) : null;
   const hp = home && home.p;
+  // Hangar dock repairs: a share of the ship's Structural Integrity, at home.
+  const hangar = listOf("home").find(f => f.type === "hangar");
+  const dock = hangar ? (facilityEffect("hangar", hangar.level) || {}).dockRepairPct : 0;
+  const dockRepair = () => {
+    const maxSi = base.ship.maxSi ?? 50;
+    save({ ship: { ...base.ship, si: Math.min(maxSi, (base.ship.si ?? maxSi) + Math.ceil(maxSi * dock / 100)) } });
+  };
   return (
     <div>
       <ScannerHeader title="BASE OF OPERATIONS" subtitle="Your faction's home world and capital ship." />
@@ -329,6 +396,17 @@ function BaseTab() {
         </div>
         <div style={{ fontSize: 11.5, color: COLORS.dim, maxWidth: 280 }}>Your player-driven faction. Claim territory and manage Influence over in the <b style={{ color: COLORS.gold }}>Universe</b> map.</div>
       </div>
+
+      {/* Where the party is decides which facilities are working for them */}
+      <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <MapPin size={16} color={COLORS.gold} />
+        <span style={{ fontSize: 12.5, fontWeight: 700 }}>The party is at</span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {PARTY_AT.map(([k, l]) => <Btn key={k} size="sm" variant={base.partyAt === k ? "gold" : "default"} onClick={() => save({ partyAt: k })}>{l}</Btn>)}
+        </div>
+        <span style={{ fontSize: 11, color: COLORS.dim, flex: "1 1 220px" }}>Facilities work where they're built while the party is there. The home world's market, hangar and barracks work from anywhere.</span>
+      </div>
+      <ActiveBonuses base={base} />
 
       {/* Loot pools that fund building & upgrading */}
       <ResourceLedger resources={base.resources} onChange={setRes} />
@@ -343,7 +421,7 @@ function BaseTab() {
             <Tag color={COLORS.dim}>Pop: {hp.population || "—"}</Tag>
           </div>}
           {moreGoverning && <GovernancePanel base={base} planet={hp} onChange={g => save({ gov: g })} />}
-          <BaseStatBlock stats={base.home} onChange={s => save({ home: s })} noun="home base" />
+          <BaseStatBlock stats={base.home} facilities={listOf("home")} onChange={s => save({ home: s })} noun="home base" />
         </>}
         facilities={listOf("home")} capacity={null} resources={base.resources} open={pickerFor === "home"} onToggle={() => setPickerFor(pickerFor === "home" ? null : "home")}
         onAdd={t => addF("home", t)} onUpgrade={id => upgrade("home", id)} onDowngrade={id => downgrade("home", id)} onRename={(id, n) => rename("home", id, n)} onRemove={id => rem("home", id)} />
@@ -353,9 +431,12 @@ function BaseTab() {
           <TextInput value={base.ship.name || ""} onChange={e => upd("ship", { name: e.target.value })} placeholder="Name the ship" style={{ width: 150, fontSize: 12, padding: "4px 8px" }} />
           {shipSys ? <span style={{ fontSize: 12, color: COLORS.blue }}><Rocket size={11} style={{ verticalAlign: "-1px" }} /> {shipSys.name.replace(/ System$/, "")} System</span> : <span style={{ fontSize: 11, color: COLORS.dim }}>Docked</span>}
         </span>}
-        extra={<BaseStatBlock stats={base.ship} onChange={s => save({ ship: s })} noun="capital ship" />}
+        extra={<BaseStatBlock stats={base.ship} facilities={listOf("ship")} onChange={s => save({ ship: s })} noun="capital ship"
+          extraActions={dock ? <Btn size="sm" variant="ghost" disabled={base.partyAt !== "home"} onClick={dockRepair} title={base.partyAt === "home" ? `The hangar restores ${dock}% of the hull` : "Bring the ship home to use the hangar"}><Wrench size={12} /> Dock repairs</Btn> : null} />}
         facilities={listOf("ship")} capacity={SHIP_BAYS} resources={base.resources} open={pickerFor === "ship"} onToggle={() => setPickerFor(pickerFor === "ship" ? null : "ship")}
         onAdd={t => addF("ship", t)} onUpgrade={id => upgrade("ship", id)} onDowngrade={id => downgrade("ship", id)} onRename={(id, n) => rename("ship", id, n)} onRemove={id => rem("ship", id)} />
+
+      <Garage base={base} saveBase={save} />
     </div>
   );
 }

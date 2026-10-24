@@ -41,7 +41,8 @@ function targetDR(type, src, row, location) {
 async function applyToCombatant(combatantId, opts) {
   const doc0 = await readDoc("session_combat");
   const row0 = doc0 && doc0[0] && (doc0[0].combatants || []).find(c => c.id === combatantId);
-  const keys = ["session_combat", "session_feed", ...(row0 && row0.sourceId && SOURCE_KEY[row0.sourceType] ? [SOURCE_KEY[row0.sourceType]] : [])];
+  const keys = ["session_combat", "session_feed", ...(row0 && row0.sourceId && SOURCE_KEY[row0.sourceType] ? [SOURCE_KEY[row0.sourceType]] : []),
+    ...(row0 && row0.vehicleOwnerId ? ["characters_v2"] : [])];
   const label = row0 ? `${opts.kind === "heal" ? "Healed" : "Hit"} ${row0.name}` : "Change";
   return undoable(label, keys, () => applyNow(combatantId, opts));
 }
@@ -94,6 +95,12 @@ async function applyNow(combatantId, opts) {
   await writeDoc("session_combat", [{ ...data, combatants: data.combatants.map(c => c.id === row.id ? { ...c, ...mirror, ...(rowConditions ? { conditions: [...(c.conditions || []), ...rowConditions] } : {}) } : c) }]);
 
   const after = { ...target, ...patch };
+  // A deployed vehicle keeps its HP on the owner's item (the Garage reads it).
+  if (type === "vehicle" && row.vehicleOwnerId && "hp" in patch) {
+    const chars = (await readDoc("characters_v2")) || [];
+    await writeDoc("characters_v2", chars.map(c => c.id !== row.vehicleOwnerId ? c : { ...c,
+      items: (c.items || []).map(i => i.id === row.vehicleItemId ? { ...i, vehicle: { ...(i.vehicle || {}), hp: Math.max(0, after.hp) } } : i) }));
+  }
   const state = pool === "hp" ? healthState(after.hp, after.maxHp) : null;
   const shown = type === "player" ? ` (${after[pool]}/${after[pool === "hp" ? "maxHp" : "maxKi"]})` : "";
   const unit = pool === "ki" ? " Ki" : "";

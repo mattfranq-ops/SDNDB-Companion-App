@@ -12,6 +12,7 @@ import { computeAC } from "../../engine/equipment.js";
 import { isCaster } from "../../engine/spellcasting.js";
 import { addInjuriesPatch, injuryLine } from "../../engine/injuries.js";
 import { crippledInjuries } from "./apply.js";
+import { useBase } from "../../state/base-state.js";
 import { roll, uid } from "../../lib/dice.js";
 import { CURRENT_HOUSE_RULES, envDmgPerTurn, envKiCostMult, useSharedList } from "../../state/hooks.js";
 import { Btn, ConfirmBtn, EmptyState, ErrorBanner, LoadingBlock, Tag, TextInput } from "../../ui/atoms.jsx";
@@ -47,6 +48,8 @@ function InitiativeTab() {
   const [chars, persistChars] = useSharedList("characters_v2");
   const [npcs, persistNpcs] = useSharedList("npcs_v2");
   const [timeState, persistTime] = useSharedList("session_time");
+  // War Room: the party's initiative bonus while fighting at the base.
+  const { bonuses: baseBonus } = useBase();
   const [picker, setPicker] = useState(null);   // "players" | "npcs" | "encounter" | null
   const [sel, setSel] = useState({});            // id -> true, staged in the picker
   const [atkId, setAtkId] = useState("");        // armed attacker (click a row to target)
@@ -331,11 +334,11 @@ function InitiativeTab() {
   // --- Pull real fighters into the tracker (Slice 1a) -----------------------
   // Combatants carry sourceId/sourceType so their pools can sync back to the
   // sheet later. Stats mirror what the sheet computes: DR = armor + power,
-  // initiative = d20 + Dex mod.
+  // initiative = d20 + Dex mod (+ the War Room at the base).
   const linkedIds = new Set(data.combatants.map(c => c.sourceId).filter(Boolean));
   const combatantFromChar = (c) => ({
     ...blankCombatant(), name: c.name, sourceId: c.id, sourceType: "player",
-    init: roll(20) + statMod(c, "dex"),
+    init: roll(20) + statMod(c, "dex") + (baseBonus.initiative || 0),
     hp: c.hp ?? c.maxHp ?? 20, maxHp: c.maxHp ?? 20,
     ki: c.ki ?? 0, maxKi: c.maxKi ?? 0,
     stamina: c.stamina ?? 0, maxStamina: c.maxStamina ?? 0,

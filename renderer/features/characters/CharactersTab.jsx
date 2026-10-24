@@ -14,6 +14,7 @@ import { Btn, ConfirmBtn, EmptyState, ErrorBanner, Field, Gauge, LoadingBlock, M
 import { COLORS, FONTS } from "../../ui/theme.js";
 import { BioTab, ClassesTab, FeatsPickerTab, FeaturesTab, SpeciesPicker, TrainingTab } from "./builder-tabs.jsx";
 import { CombatRefTab } from "./combat-tab.jsx";
+import { CraftingTab } from "./crafting-tab.jsx";
 import { BenefitsOfPowerCard, ConditionsPanel, FormsPlayTab, FormsTab, PowerOverloadCard } from "./forms.jsx";
 import { FullBuilder } from "./full-builder.jsx";
 import { MagicTab } from "./magic.jsx";
@@ -76,8 +77,8 @@ function CharacterEditorSimple({ char, onChange, onDelete, onClose, onDuplicate 
     reader.onload = () => { try { setLocal(migrateChar({ ...JSON.parse(reader.result), id: local.id })); } catch { notify("Couldn't read that file."); } };
     reader.readAsText(f);
   };
-  const TABS = ["scouter", "bio", "stats", "combat", ...(isCaster(local) ? ["magic"] : []), "vitals", "forms", "inventory", "manage"];
-  const TAB_LABELS = { scouter: "Scouter", bio: "Bio", stats: "Stats", combat: "Combat", magic: "Magic", vitals: "Vitals", forms: "Forms", inventory: "Inventory", manage: "Manage" };
+  const TABS = ["scouter", "bio", "stats", "combat", ...(isCaster(local) ? ["magic"] : []), "vitals", "forms", "inventory", "crafting", "manage"];
+  const TAB_LABELS = { scouter: "Scouter", bio: "Bio", stats: "Stats", combat: "Combat", magic: "Magic", vitals: "Vitals", forms: "Forms", inventory: "Inventory", crafting: "Crafting", manage: "Manage" };
 
   return (
     <div className="sd-sheet" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
@@ -150,6 +151,7 @@ function CharacterEditorSimple({ char, onChange, onDelete, onClose, onDuplicate 
       )}
 
       {tab === "inventory" && <InventoryTab char={local} set={set} />}
+      {tab === "crafting" && <CraftingTab char={local} set={set} />}
 
       {tab === "manage" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420 }}>
