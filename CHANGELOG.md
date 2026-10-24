@@ -5,14 +5,15 @@
 Everything from 1.13.2 still works the same way, and existing tables load unchanged.
 
 **Crafting, the base and the garage do real things**
-- A **Crafting** tab on every sheet runs the book's Downtime making activities (Ch.5), each
-  spending Downtime Points: **Craft** any gear, armor, weapon, vehicle or mech (and Scientific
-  Marvels once invented) with its toolkit, paying 85% of the price, less for higher rolls;
-  **Gather Materials** for a discount on the next craft; **Invent** Marvels; **Enchant** a
-  weapon or armor (+1 to +3 and a book Enchantment) and **Improve** it later for half price;
-  **Cook** a meal that gives the cook and anyone fed Temporary HP, Ki and Stamina; and **Train**
-  in a Gravity Chamber to raise Accustomed Gravity. Every result lands on the sheet and in the
-  Session log, and the app can roll or take your physical d20.
+- **Crafting** is a Materoids flavor with its own tab (turn it on in Compendium → Materoids
+  Flavors). Pick a character and run the book's Downtime making activities (Ch.5), each spending
+  Downtime Points: **Craft** any gear, armor, weapon, vehicle or mech (and Scientific Marvels
+  once invented) with its toolkit, paying 85% of the price, less for higher rolls; **Gather
+  Materials** for a discount on the next craft; **Invent** Marvels; **Enchant** a weapon or
+  armor (+1 to +3 and a book Enchantment) and **Improve** it later for half price; **Cook** a
+  meal that gives the cook and anyone fed Temporary HP, Ki and Stamina; and **Train** in a
+  Gravity Chamber to raise Accustomed Gravity. Every result lands on the character's sheet and
+  in the Session log, and the app can roll or take your physical d20.
 - Enchanted weapons add their bonus to attack and damage on the Combat tab, and enchanted armor
   and shields add it to AC.
 - Every base facility now has numbers at each tier, shown on its card and in a "Working for the

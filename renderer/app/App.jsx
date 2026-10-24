@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { QuickDice } from "./QuickDice.jsx";
 import { RotateCcw, WifiOff } from "lucide-react";
 import { BaseTab } from "../features/base/BaseTab.jsx";
+import { CraftingScreen } from "../features/crafting/crafting.jsx";
 import { CharactersTab } from "../features/characters/CharactersTab.jsx";
 import { CompendiumTab } from "../features/compendium/compendium.jsx";
 import { EquipmentCompendiumTab } from "../features/compendium/gear.jsx";
@@ -120,7 +121,7 @@ function BottomNav({ nav, tab, onSelect }) {
           }}>
             <span style={{ position: "absolute", top: -1, left: "22%", right: "22%", height: 2, background: active ? COLORS.gold : "transparent", boxShadow: active ? `0 0 10px ${COLORS.gold}` : "none" }} />
             <n.icon size={19} />
-            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" }}>{n.label}</span>
+            <span className="sd-navlabel" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" }}>{n.label}</span>
           </button>
         );
       })}
@@ -132,8 +133,8 @@ export default function App() {
   const [tab, setTab] = useState("players");
   const [gmScreen, setGmScreen] = useState(null); // null = hub
   const [houseRules] = useHouseRules();
-  // The Base tab is a Materoids flavor — only in the nav when the rule is on.
-  const nav = NAV.filter(n => n.key !== "base" || houseRules.baseBuilding);
+  // The Base and Crafting tabs are Materoids flavors, only in the nav when their rule is on.
+  const nav = NAV.filter(n => (n.key !== "base" || houseRules.baseBuilding) && (n.key !== "crafting" || houseRules.crafting));
 
   // Mirror the current world's gravity so Weighted math is live on every tab.
   useEnvGravitySync();
@@ -168,6 +169,7 @@ export default function App() {
           <div className="sd-screen">
             {tab === "players" && <CharactersTab />}
             {tab === "base" && houseRules.baseBuilding && <BaseTab />}
+            {tab === "crafting" && houseRules.crafting && <CraftingScreen />}
             {tab === "npcs" && <NpcTab />}
             {tab === "session" && <SessionTab />}
             {tab === "universe" && <UniverseTab />}

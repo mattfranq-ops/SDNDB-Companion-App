@@ -318,6 +318,16 @@ function MateroidsFlavorsTab() {
       </div>
 
       <div>
+        <div style={{ fontSize: 12, color: COLORS.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Crafting</div>
+        <div style={{ fontSize: 11.5, color: COLORS.dim, marginBottom: 12 }}>The book's Downtime making activities on their own tab. Pick a character and spend Downtime Points to craft gear, armor, weapons, vehicles and mechs, gather materials, invent Scientific Marvels, enchant and improve gear, cook meals that grant Temporary HP, Ki and Stamina, and train in a Gravity Chamber. Results go straight onto the character's sheet. With Base Building on, the base's Workshop, Comms Array, Black Market, Gravity Chamber and Training Grounds add their bonuses. Off hides the tab.</div>
+        <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16 }}>
+          <button onClick={() => persist({ crafting: !houseRules.crafting })} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, borderRadius: 20, padding: "6px 16px", border: `1px solid ${houseRules.crafting ? COLORS.gold : COLORS.border}`, background: houseRules.crafting ? `${COLORS.gold}1A` : "transparent", color: houseRules.crafting ? COLORS.gold : COLORS.muted }}>
+            {houseRules.crafting ? "On · Crafting tab shown" : "Off"}
+          </button>
+        </div>
+      </div>
+
+      <div>
         <div style={{ fontSize: 12, color: COLORS.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>More Governing</div>
         <div style={{ fontSize: 11.5, color: COLORS.dim, marginBottom: 12 }}>Adds a governance layer to the Base tab's home world (needs Base Building on). The base runs a weekly economy: income auto-derives from the planet's wealth, tax and commerce facilities, banks over time on the Session clock, and splits into a small player dividend and the People's Money that funds upgrades. Facilities move Stability and Reputation, and a "legal" Black Market lets the party trade the people's trust for profit. A balancing game for tables that want it.</div>
         <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16 }}>

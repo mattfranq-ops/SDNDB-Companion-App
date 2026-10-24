@@ -27,6 +27,7 @@ function globalCss() {
     /* Phones: the initiative row stacks (name + init on top, then each pool and
        the controls on their own lines) instead of eight columns side by side. */
     @media (max-width: 700px) {
+      .sd-navlabel { font-size: 8.5px !important; letter-spacing: 0 !important; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .sd-tracker-row { grid-template-columns: 18px minmax(0,1fr) 56px !important; }
       .sd-tracker-row > :nth-child(n+4) { grid-column: 1 / -1 !important; }
       .sd-tracker-row > .sd-tracker-dr { justify-self: start; width: 90px !important; }

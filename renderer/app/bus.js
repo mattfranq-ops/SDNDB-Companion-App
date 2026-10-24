@@ -1,9 +1,10 @@
-import { Building2, Globe2, Orbit, UserSquare2, Users, Wrench } from "lucide-react";
+import { Building2, Globe2, Hammer, Orbit, UserSquare2, Users, Wrench } from "lucide-react";
 import { uid } from "../lib/dice.js";
 
 const NAV = [
   { key: "players", label: "Players", icon: UserSquare2 },
   { key: "base", label: "Base", icon: Building2 },
+  { key: "crafting", label: "Crafting", icon: Hammer },
   { key: "npcs", label: "NPCs", icon: Users },
   { key: "session", label: "Session", icon: Globe2 },
   { key: "universe", label: "Universe", icon: Orbit },

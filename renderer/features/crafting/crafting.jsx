@@ -15,12 +15,13 @@ import { isCaster } from "../../engine/spellcasting.js";
 import { roll } from "../../lib/dice.js";
 import { useBase } from "../../state/base-state.js";
 import { useHouseRules, useSharedList } from "../../state/hooks.js";
-import { Btn, Checkbox, Select, Tag, TextInput } from "../../ui/atoms.jsx";
+import { Btn, Checkbox, EmptyState, LoadingBlock, ScannerHeader, Select, Tag, TextInput } from "../../ui/atoms.jsx";
+import { useLocalOption } from "../../state/local-options.js";
 import { COLORS, FONTS } from "../../ui/theme.js";
 import { buildStoreCatalog, purchaseItemFromCatalog } from "../universe/store.jsx";
 import { miniBtnStyle } from "../session/combat-parts.jsx";
 
-/* ===== Crafting: the making Downtime Activities (5.0 Ch.5) on a sheet =====
+/* ===== Crafting: the making Downtime Activities (5.0 Ch.5) =====
    Each activity spends Downtime Points, rolls (or takes a typed physical
    roll), pays from the character's Zeni and changes the sheet: a new item in
    the inventory, an enchanted weapon, an invented Marvel, a meal's Temporary
@@ -101,10 +102,12 @@ function ResultCard({ result }) {
   );
 }
 
-function CraftingTab({ char, set }) {
+// One crafter's workbench. `set(patch, others)` writes the crafter's patch and
+// any patches for other characters (a shared meal) in one save.
+function Workbench({ char, set }) {
   const { bonuses, enabled } = useBase();
   const [hr] = useHouseRules();
-  const [chars, persistChars] = useSharedList("characters_v2");
+  const [chars] = useSharedList("characters_v2");
   const [act, setAct] = useState("craft");
   const [result, setResult] = useState(null);
   const dp = char.downtimePoints || 0;
@@ -113,8 +116,8 @@ function CraftingTab({ char, set }) {
   const who = char.name || "Someone";
   const canSpend = (activity) => dp >= (DOWNTIME_COST[activity] || 1);
   const share = (lbl, total, detail) => emitRoll({ label: `${who}: ${lbl}`, total, detail, color: COLORS.gold, share: true, who });
-  const finish = (ok, title, lines, patch) => {
-    set(patch);
+  const finish = (ok, title, lines, patch, others) => {
+    set(patch, others);
     setResult({ ok, title, lines });
     logSession(`${who} · ${title}`, who);
   };
@@ -159,7 +162,7 @@ function CraftingTab({ char, set }) {
       {act === "gather" && <GatherPanel char={char} bonuses={bonuses} canSpend={canSpend("gather")} share={share} finish={finish} />}
       {act === "invent" && <InventPanel char={char} bonuses={bonuses} canSpend={canSpend("invent")} share={share} finish={finish} />}
       {act === "enchant" && <EnchantPanel char={char} canSpend={canSpend} share={share} finish={finish} />}
-      {act === "cook" && <CookPanel char={char} set={set} chars={chars} persistChars={persistChars} canSpend={canSpend("cook")} share={share} finish={finish} />}
+      {act === "cook" && <CookPanel char={char} set={set} chars={chars} canSpend={canSpend("cook")} share={share} finish={finish} />}
       {act === "train" && <TrainPanel char={char} bonuses={bonuses} hr={hr} share={share} finish={finish} />}
     </div>
   );
@@ -328,7 +331,7 @@ function EnchantPanel({ char, canSpend, share, finish }) {
   );
 }
 
-function CookPanel({ char, set, chars, persistChars, canSpend, share, finish }) {
+function CookPanel({ char, set, chars, canSpend, share, finish }) {
   const [t, setT] = useState(0);
   const [abil, setAbil] = useState("wis");
   const party = (chars || []).filter(c => !c.archived && c.id !== char.id);
@@ -341,10 +344,9 @@ function CookPanel({ char, set, chars, persistChars, canSpend, share, finish }) 
     const base = { downtimePoints: (char.downtimePoints || 0) - DOWNTIME_COST.cook, zeni: (char.zeni || 0) - tier.zeni };
     if (total < tier.dc) return finish(false, `The meal flopped (${total})`, [`Ingredients (${z(tier.zeni)}) and the Downtime Point are spent.`], base);
     const fed = party.filter(c => eaters[c.id]);
-    if (fed.length) persistChars((chars || []).map(c => eaters[c.id] && c.id !== char.id ? { ...c, ...mealPatch(c, tier) } : c));
     finish(true, `Served ${tier.name.toLowerCase()} (${total})`,
       [`Everyone who ate has at least ${tier.hp} Temporary HP, ${tier.ki} Temporary Ki and ${tier.stamina} Temporary Stamina.`, `Ate: ${[char.name || "you", ...fed.map(c => c.name)].join(", ")}`],
-      { ...base, ...mealPatch(char, tier) });
+      { ...base, ...mealPatch(char, tier) }, Object.fromEntries(fed.map(c => [c.id, mealPatch(c, tier)])));
   };
   return (
     <div style={card}>
@@ -390,4 +392,30 @@ function TrainPanel({ char, bonuses, hr, share, finish }) {
   );
 }
 
-export { CraftingTab };
+// The Crafting screen (a Materoids flavor): pick who's crafting, then work.
+function CraftingScreen() {
+  const [chars, persistChars] = useSharedList("characters_v2");
+  const [crafterId, setCrafterId] = useLocalOption("sdndbz_crafter_v1", { id: "" });
+  if (chars === null) return <LoadingBlock />;
+  const roster = (chars || []).filter(c => !c.archived);
+  const char = roster.find(c => c.id === crafterId.id) || null;
+  const set = (patch, others = {}) => persistChars((chars || []).map(c =>
+    c.id === char.id ? { ...c, ...patch } : others[c.id] ? { ...c, ...others[c.id] } : c));
+  return (
+    <div>
+      <ScannerHeader title="CRAFTING" subtitle="Downtime making: craft, gather, invent, enchant, cook and train." />
+      {roster.length === 0 ? <EmptyState icon={Hammer} title="No characters yet" body="Make a character on the Players tab first." /> : <>
+        <div style={{ ...card, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700 }}>Crafter</span>
+          <Select value={char ? char.id : ""} onChange={e => setCrafterId({ id: e.target.value })} style={{ width: 240 }} aria-label="Crafter">
+            <option value="">Pick who's crafting…</option>
+            {roster.map(c => <option key={c.id} value={c.id}>{c.name || "Unnamed"}</option>)}
+          </Select>
+        </div>
+        {char && <Workbench key={char.id} char={char} set={set} />}
+      </>}
+    </div>
+  );
+}
+
+export { CraftingScreen, Workbench };

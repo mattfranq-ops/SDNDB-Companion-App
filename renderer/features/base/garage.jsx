@@ -133,7 +133,7 @@ function Garage({ base }) {
         </span>
       </div>
       {entries.length === 0
-        ? <div style={{ fontSize: 12, color: COLORS.dim }}>No vehicles or mechs yet. Buy one in the Store or build one from a sheet's Crafting tab.</div>
+        ? <div style={{ fontSize: 12, color: COLORS.dim }}>No vehicles or mechs yet. Buy one in the Store or build one on the Crafting tab.</div>
         : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 10 }}>
             {entries.map(e => <VehicleCard key={e.item.id} entry={e} bonuses={bonuses} onItem={onItem(e)} onPay={onPay(e)} onDeploy={deploy} deployed={deployedIds.has(e.item.id)} />)}
           </div>}
