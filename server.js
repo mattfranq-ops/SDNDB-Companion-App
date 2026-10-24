@@ -12,6 +12,7 @@ const http = require("http");
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 
 let server = null;
 let listenPort = 0;
@@ -255,11 +256,29 @@ function serveStatic(req, res, pathname) {
   if (file !== webDir && !file.startsWith(webDir + path.sep)) { sendJson(res, 404, { error: "not found" }); return; }
   fs.readFile(file, (err, data) => {
     if (err) { sendJson(res, 404, { error: "not found" }); return; }
-    const type = MIME[path.extname(file).toLowerCase()] || "application/octet-stream";
+    const ext = path.extname(file).toLowerCase();
+    const type = MIME[ext] || "application/octet-stream";
     // index.html points at versioned bundles, so it must never be cached.
-    res.writeHead(200, { "Content-Type": type, "Cache-Control": rel === "/index.html" ? "no-cache" : "public, max-age=3600" });
-    res.end(req.method === "HEAD" ? undefined : data);
+    const headers = { "Content-Type": type, "Cache-Control": rel === "/index.html" ? "no-cache" : "public, max-age=3600" };
+    // Text compresses to about a fifth, which matters for phones on Wi-Fi.
+    let body = data;
+    if (/\.(js|css|html|json|webmanifest|svg)$/.test(ext) && /\bgzip\b/.test(req.headers["accept-encoding"] || "")) {
+      body = gzipped(file, data);
+      headers["Content-Encoding"] = "gzip";
+      headers["Vary"] = "Accept-Encoding";
+    }
+    res.writeHead(200, headers);
+    res.end(req.method === "HEAD" ? undefined : body);
   });
+}
+const gzipCache = new Map(); // file -> { size, mtime, gz }
+function gzipped(file, data) {
+  let st = null; try { st = fs.statSync(file); } catch { /* raced a rebuild */ }
+  const hit = gzipCache.get(file);
+  if (hit && st && hit.size === st.size && hit.mtime === st.mtimeMs) return hit.gz;
+  const gz = zlib.gzipSync(data, { level: 6 });
+  if (st) gzipCache.set(file, { size: st.size, mtime: st.mtimeMs, gz });
+  return gz;
 }
 
 // --- lifecycle -----------------------------------------------------------

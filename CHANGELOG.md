@@ -4,6 +4,23 @@
 
 Everything from 1.13.2 still works the same way, and existing tables load unchanged.
 
+**Phone feel and reliability**
+- On a phone, the header and page banners shrink. The sheet's tabs scroll sideways, and HP, Ki and
+  Stamina stay pinned under the app bar while the sheet scrolls. The map handle is now a round
+  button above the bottom nav.
+- A **dice button** on every screen. Tap dice to build a pool (2d6 + 1d8), add a modifier, roll
+  a lone d20 with Advantage or Disadvantage, and reroll from recent rolls. Rolls land in the
+  table's Rolls log.
+- **Undo** for hits, heals and deleted characters or NPCs, for a few seconds after each one.
+- If the host drops, screens keep the last copy of the table and a banner says changes won't
+  save until it reconnects. After a reconnect, everything re-reads what it missed (before,
+  updates sent during the drop were lost until the next change).
+- The app is minified (3.4 MB to 2.6 MB), and the table server gzips it (about 550 KB over
+  Wi-Fi).
+- On touch screens, controls are at least 36 px tall. Inputs use 16 px text so iPhones don't
+  zoom in when you tap one.
+- The last browser alert pop-ups became in-app notices.
+
 **Injuries on the body**
 - The Vitals tab's body model shows every injury where it is. A pulsing mark means an open
   injury. A lost arm, leg or tail is cut off the figure, and a lost eye gets a patch. Tap a body

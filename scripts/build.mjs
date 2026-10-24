@@ -29,6 +29,9 @@ const options = {
   define: { "process.env.NODE_ENV": watch ? '"development"' : '"production"' },
   target: ["chrome124", "safari15"],
   sourcemap: watch ? "inline" : false,
+  // Smaller download for phones joining over Wi-Fi; names kept for error reports.
+  minify: !watch,
+  keepNames: true,
   logLevel: "info",
   plugins: [{ name: "index-html", setup(build) { build.onEnd((r) => { if (!r.errors.length) writeIndex(); }); } }],
 };

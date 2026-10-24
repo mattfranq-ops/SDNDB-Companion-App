@@ -13,6 +13,25 @@ let connected = false;
 
 const subs = new Map();       // key -> Set(cb)   live subscribers
 const statusCbs = new Set();  // connection-status listeners
+let everOpened = false;       // a reconnect (not the first open) re-reads what we watch
+
+// Last value seen for each shared doc, so a dropped connection shows the last
+// known table instead of blank screens. Kept per table in localStorage (big
+// docs only in memory) and refreshed on every read and live update.
+const memCache = new Map();
+const cacheKey = (key) => `sdndbz_cache:${world}:${key}`;
+function remember(key, value) {
+  memCache.set(world + ":" + key, value);
+  try {
+    if (value == null) localStorage.removeItem(cacheKey(key));
+    else if (value.length < 1500000) localStorage.setItem(cacheKey(key), value);
+  } catch { /* storage full: memory copy only */ }
+}
+function recall(key) {
+  const m = memCache.get(world + ":" + key);
+  if (m !== undefined) return m;
+  try { return localStorage.getItem(cacheKey(key)); } catch { return null; }
+}
 
 function setWorld(code) {
   world = (code || "").trim().toUpperCase();
@@ -69,6 +88,15 @@ function connect(timeoutMs = 8000) {
 
     es.onopen = () => {
       emitStatus(true);
+      // Back after a drop: updates sent meanwhile were missed, so re-read
+      // every doc someone is watching.
+      if (everOpened) {
+        for (const [key, set] of subs) {
+          if (!set.size) continue;
+          window.storage.get(key, true).then((r) => set.forEach((cb) => { try { cb(r.value); } catch {} })).catch(() => {});
+        }
+      }
+      everOpened = true;
       if (!settled) { settled = true; clearTimeout(timer); resolve(); }
     };
     es.onerror = () => {
@@ -78,6 +106,7 @@ function connect(timeoutMs = 8000) {
     };
     es.addEventListener("update", (e) => {
       const { key, value } = JSON.parse(e.data);
+      remember(key, value);
       const set = subs.get(key);
       if (set) set.forEach((cb) => { try { cb(value); } catch {} });
     });
@@ -91,6 +120,7 @@ function connect(timeoutMs = 8000) {
 
 function disconnect() {
   if (evtSource) { evtSource.close(); evtSource = null; }
+  everOpened = false;
   emitStatus(false);
 }
 
@@ -101,8 +131,16 @@ window.storage = {
       if (v === null) throw new Error("not found");
       return { key, value: v, shared: false };
     }
-    const res = await api("get", { key });
+    let res;
+    try { res = await api("get", { key }); }
+    catch (err) {
+      // Host unreachable: fall back to the last copy we saw.
+      const cached = recall(key);
+      if (cached != null) return { key, value: cached, shared: true, stale: true };
+      throw err;
+    }
     if (!res.found) throw new Error("not found");
+    remember(key, res.value);
     return { key, value: res.value, shared: true };
   },
 
@@ -112,6 +150,7 @@ window.storage = {
       return { key, value, shared: false };
     }
     await api("set", { key, value });
+    remember(key, value);
     return { key, value, shared: true };
   },
 

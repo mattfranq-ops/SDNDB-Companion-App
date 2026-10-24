@@ -1,4 +1,4 @@
-import { logSession } from "../../app/bus.js";
+import { logSession, undoable } from "../../app/bus.js";
 import { HEALTH_LABEL, damagePatch, healPatch, healthState, resolveDamage, totalDR } from "../../engine/damage.js";
 import { defaultRounds, findCondition } from "../../engine/conditions.js";
 import { addInjuriesPatch, injuryLine, rollCritInjury, rollLingeringInjury } from "../../engine/injuries.js";
@@ -37,7 +37,16 @@ function targetDR(type, src, row, location) {
 //         by (attacker name), what (move name) }
 // A Critical Hit that does HP damage rolls a Crit Injury where it landed
 // (house rule `critInjuries`, on by default).
+// Every hit or heal can be undone for a few seconds (see undoable in bus.js).
 async function applyToCombatant(combatantId, opts) {
+  const doc0 = await readDoc("session_combat");
+  const row0 = doc0 && doc0[0] && (doc0[0].combatants || []).find(c => c.id === combatantId);
+  const keys = ["session_combat", "session_feed", ...(row0 && row0.sourceId && SOURCE_KEY[row0.sourceType] ? [SOURCE_KEY[row0.sourceType]] : [])];
+  const label = row0 ? `${opts.kind === "heal" ? "Healed" : "Hit"} ${row0.name}` : "Change";
+  return undoable(label, keys, () => applyNow(combatantId, opts));
+}
+
+async function applyNow(combatantId, opts) {
   const doc = await readDoc("session_combat");
   const data = doc && doc[0];
   const row = data && (data.combatants || []).find(c => c.id === combatantId);

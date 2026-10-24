@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { QuickDice } from "./QuickDice.jsx";
+import { RotateCcw, WifiOff } from "lucide-react";
 import { BaseTab } from "../features/base/BaseTab.jsx";
 import { CharactersTab } from "../features/characters/CharactersTab.jsx";
 import { CompendiumTab } from "../features/compendium/compendium.jsx";
@@ -17,7 +19,7 @@ import { useEnvGravitySync, useEnvHooksSync, useHouseRules } from "../state/hook
 import { useRegistryMirror } from "../state/registry.js";
 import { ScannerHeader, chamfer } from "../ui/atoms.jsx";
 import { COLORS, FONTS } from "../ui/theme.js";
-import { NAV, onNav } from "./bus.js";
+import { NAV, onNav, onUndo } from "./bus.js";
 import { ErrorBoundary } from "./ErrorBoundary.jsx";
 import { globalCss } from "./global-css.js";
 import { OptionsTab } from "./OptionsTab.jsx";
@@ -50,17 +52,58 @@ function GmScreen({ screen, onBack }) {
 
 function AppHeader() {
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 200, borderBottom: `1px solid ${COLORS.border}`, background: `${COLORS.panel}F2`, backdropFilter: "blur(8px)", padding: "10px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+    <header className="sd-appheader" style={{ position: "sticky", top: 0, zIndex: 200, borderBottom: `1px solid ${COLORS.border}`, background: `${COLORS.panel}F2`, backdropFilter: "blur(8px)", padding: "10px 20px", display: "flex", alignItems: "center", gap: 12 }}>
       <div aria-hidden style={{ width: 28, height: 28, clipPath: chamfer(7), background: `linear-gradient(135deg, ${COLORS.gold}, ${COLORS.red})`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.onAccent, boxShadow: `0 0 0 3px ${COLORS.gold}` }} />
       </div>
       <div style={{ lineHeight: 1.1 }}>
         <div style={{ fontFamily: FONTS.display, fontWeight: 900, fontSize: 13.5, letterSpacing: 1.2 }}>SDNDBZ COMPANION</div>
-        <div style={{ fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.dim, letterSpacing: 1.4 }}>SUPER DUNGEONS & DRAGONBALL</div>
+        <div className="sd-appheader-sub" style={{ fontFamily: FONTS.mono, fontSize: 9.5, color: COLORS.dim, letterSpacing: 1.4 }}>SUPER DUNGEONS & DRAGONBALL</div>
       </div>
       <div style={{ flex: 1 }} />
       <TableStatus />
     </header>
+  );
+}
+
+// Shown when the connection to the table drops: the screens keep the last
+// copy they had, but nothing saves until it comes back.
+function ConnectionBanner() {
+  const [down, setDown] = useState(false);
+  useEffect(() => {
+    let timer = null, seen = false;
+    // Reconnect attempts repeat "offline"; only the first one starts the clock.
+    const off = window.storage.onStatus((live) => {
+      if (live) { clearTimeout(timer); timer = null; seen = true; setDown(false); }
+      else if (seen && !timer) timer = setTimeout(() => setDown(true), 2500);
+    });
+    return () => { clearTimeout(timer); off(); };
+  }, []);
+  if (!down) return null;
+  return (
+    <div role="alert" style={{ position: "sticky", top: 49, zIndex: 190, background: `${COLORS.amber}1F`, borderBottom: `1px solid ${COLORS.amber}66`, color: COLORS.text, fontSize: 12.5, padding: "7px 16px", display: "flex", alignItems: "center", gap: 10, backdropFilter: "blur(6px)" }}>
+      <WifiOff size={15} color={COLORS.amber} />
+      <span style={{ flex: 1 }}><b style={{ color: COLORS.amber }}>Lost the table.</b> You're seeing the last saved copy. Changes won't save until it reconnects, which it keeps trying to do.</span>
+    </div>
+  );
+}
+
+// "Hit Kael · Undo" for a few seconds after anything undoable (bus.js).
+function UndoHost() {
+  const [item, setItem] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let timer = null;
+    const off = onUndo((u) => { clearTimeout(timer); setItem(u); timer = setTimeout(() => setItem(null), 7000); });
+    return () => { clearTimeout(timer); off(); };
+  }, []);
+  if (!item) return null;
+  const undo = async () => { setBusy(true); try { await item.restore(); } finally { setBusy(false); setItem(null); } };
+  return (
+    <div role="status" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "calc(84px + env(safe-area-inset-bottom))", zIndex: 170, display: "flex", alignItems: "center", gap: 12, background: COLORS.panel2, border: `1px solid ${COLORS.borderLit}`, borderRadius: 10, padding: item.restore ? "8px 8px 8px 14px" : "11px 14px", boxShadow: "0 10px 30px rgba(0,0,0,.55)", maxWidth: "calc(100vw - 150px)", animation: "rollpop .2s ease" }}>
+      <span style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+      {item.restore && <button onClick={undo} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", background: `${COLORS.gold}1A`, border: `1px solid ${COLORS.gold}66`, color: COLORS.gold, borderRadius: 6, padding: "7px 12px", fontWeight: 700, fontSize: 13 }}><RotateCcw size={14} /> Undo</button>}
+    </div>
   );
 }
 
@@ -117,9 +160,10 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: `radial-gradient(ellipse at 50% -10%, ${COLORS.blue}0C, transparent 55%), ${COLORS.bg}`, color: COLORS.text, fontFamily: FONTS.body }}>
       <style>{globalCss()}</style>
       <AppHeader />
+      <ConnectionBanner />
       <RollBannerHost />
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "22px 20px 96px" }}>
+      <main className="sd-main" style={{ maxWidth: 1100, margin: "0 auto", padding: "22px 20px 96px" }}>
         <ErrorBoundary key={`${tab}:${gmScreen || ""}`}>
           <div className="sd-screen">
             {tab === "players" && <CharactersTab />}
@@ -135,6 +179,8 @@ export default function App() {
         {["players", "npcs", "session"].includes(tab) && <ErrorBoundary key="map"><MapDrawer /></ErrorBoundary>}
       </main>
 
+      <QuickDice />
+      <UndoHost />
       <BottomNav nav={nav} tab={tab} onSelect={select} />
     </div>
   );

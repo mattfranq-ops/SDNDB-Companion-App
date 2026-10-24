@@ -60,6 +60,31 @@ function clearPendingNav(entityId) { if (_pendingNav && _pendingNav.entityId ===
 // Shared Session activity feed — anything worth surfacing to the whole table
 // (a feature spent, a per-turn cost, etc.). Append-capped in the shared room
 // doc; the Session tab renders it live.
+/* ===== Undo — an action that changes shared docs can be taken back for a few
+   seconds. undoable() snapshots the docs, runs the action, and UndoHost
+   (mounted once by App) offers an Undo button that writes the snapshot back. */
+const _undoSubs = new Set();
+function onUndo(fn) { _undoSubs.add(fn); return () => _undoSubs.delete(fn); }
+async function undoable(label, keys, action) {
+  const before = {};
+  for (const k of keys) {
+    try { const r = await window.storage.get(k, true); before[k] = r.value; } catch { before[k] = null; }
+  }
+  const out = await action();
+  if (out && out.ok === false) return out;
+  const restore = async () => {
+    for (const k of keys) {
+      if (before[k] == null) await window.storage.delete(k, true).catch(() => {});
+      else await window.storage.set(k, before[k], true);
+    }
+  };
+  _undoSubs.forEach(fn => { try { fn({ label, restore }); } catch { /* ignore */ } });
+  return out;
+}
+
+// A short in-app notice in the same spot (no Undo button), instead of alert().
+function notify(label) { _undoSubs.forEach(fn => { try { fn({ label }); } catch { /* ignore */ } }); }
+
 async function logSession(text, who = "") {
   try {
     let list = [];
@@ -70,6 +95,9 @@ async function logSession(text, who = "") {
 }
 
 export {
+  onUndo,
+  undoable,
+  notify,
   NAV,
   _rollBannerSubs,
   emitRoll,

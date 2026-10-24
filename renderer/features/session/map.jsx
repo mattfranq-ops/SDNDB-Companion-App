@@ -204,7 +204,7 @@ function MapDrawer() {
   const width = 760;
   return (
     <>
-      <button onClick={() => setUi({ open: !open })} title="Battle map"
+      <button className={`sd-maptab${open ? " open" : ""}`} onClick={() => setUi({ open: !open })} title="Battle map" aria-label={open ? "Close the battle map" : "Open the battle map"}
         style={{ position: "fixed", top: "50%", right: open ? width : 0, transform: "translateY(-50%)", zIndex: 60, background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRight: "none", borderRadius: "10px 0 0 10px", color: COLORS.gold, cursor: "pointer", padding: "16px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, transition: "right .25s ease", maxWidth: "8vw" }}>
         {open ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         <span style={{ writingMode: "vertical-rl", fontSize: 11, fontWeight: 800, letterSpacing: 1.5 }}>MAP</span>

@@ -12,8 +12,8 @@ const chamfer = (n = 10) => `polygon(${n}px 0, 100% 0, 100% calc(100% - ${n}px),
 
 function ScannerHeader({ title, subtitle, onBack, actions }) {
   return (
-    <div style={{ position: "relative", marginBottom: 18 }}>
-      <div style={{ position: "relative", overflow: "hidden", clipPath: chamfer(14), background: `linear-gradient(120deg, ${COLORS.panel2} 0%, ${COLORS.panel} 55%, ${COLORS.deep} 100%)`, padding: "16px 20px 16px 22px", boxShadow: `inset 0 0 0 1px ${COLORS.border}` }}>
+    <div className="sd-banner" style={{ position: "relative", marginBottom: 18 }}>
+      <div className="sd-banner-inner" style={{ position: "relative", overflow: "hidden", clipPath: chamfer(14), background: `linear-gradient(120deg, ${COLORS.panel2} 0%, ${COLORS.panel} 55%, ${COLORS.deep} 100%)`, padding: "16px 20px 16px 22px", boxShadow: `inset 0 0 0 1px ${COLORS.border}` }}>
         {/* fine scanner grid + sweeping glow */}
         <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${COLORS.blue}0A 1px, transparent 1px), linear-gradient(90deg, ${COLORS.blue}0A 1px, transparent 1px)`, backgroundSize: "22px 22px", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: 0, left: "-30%", width: "30%", height: "100%", background: `linear-gradient(90deg, transparent, ${COLORS.blue}1F, transparent)`, animation: "scanmove 3.5s linear infinite", pointerEvents: "none" }} />
@@ -26,7 +26,7 @@ function ScannerHeader({ title, subtitle, onBack, actions }) {
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: FONTS.display, fontWeight: 800, fontSize: 20, letterSpacing: 1.6, textTransform: "uppercase", color: COLORS.text, textShadow: `0 0 18px ${COLORS.blue}33`, lineHeight: 1.15 }}>{title}</div>
-            {subtitle && <div style={{ color: COLORS.muted, fontSize: 12.5, marginTop: 4, lineHeight: 1.45 }}>{subtitle}</div>}
+            {subtitle && <div className="sd-banner-sub" style={{ color: COLORS.muted, fontSize: 12.5, marginTop: 4, lineHeight: 1.45 }}>{subtitle}</div>}
           </div>
           {actions && <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>{actions}</div>}
         </div>

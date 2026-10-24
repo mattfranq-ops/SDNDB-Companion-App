@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Archive, ArrowLeft, Check, Copy, Dices, Download, Plus, Printer, Trash2, TrendingUp, Upload, Users, X } from "lucide-react";
 import { duplicateChar, printCharacter } from "./print-sheet.js";
-import { _pendingNav, clearPendingNav, onNav } from "../../app/bus.js";
+import { _pendingNav, clearPendingNav, onNav, undoable, notify } from "../../app/bus.js";
 import { CLASS_NAMES } from "../../data/class-data.js";
 import { CLASS_HIT_DICE, abilityMod, charClasses, charTotalLevel, computeKiRank } from "../../engine/core.js";
 import { computeAttacksPerTurn } from "../../engine/derived.js";
@@ -73,17 +73,17 @@ function CharacterEditorSimple({ char, onChange, onDelete, onClose, onDuplicate 
   const importFile = (e) => {
     const f = e.target.files[0]; if (!f) return;
     const reader = new FileReader();
-    reader.onload = () => { try { setLocal(migrateChar({ ...JSON.parse(reader.result), id: local.id })); } catch { alert("Couldn't read that file."); } };
+    reader.onload = () => { try { setLocal(migrateChar({ ...JSON.parse(reader.result), id: local.id })); } catch { notify("Couldn't read that file."); } };
     reader.readAsText(f);
   };
   const TABS = ["scouter", "bio", "stats", "combat", ...(isCaster(local) ? ["magic"] : []), "vitals", "forms", "inventory", "manage"];
   const TAB_LABELS = { scouter: "Scouter", bio: "Bio", stats: "Stats", combat: "Combat", magic: "Magic", vitals: "Vitals", forms: "Forms", inventory: "Inventory", manage: "Manage" };
 
   return (
-    <div style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
-        <TextInput value={local.name} onChange={e => set({ name: e.target.value })} style={{ fontFamily: FONTS.display, fontSize: 18, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300 }} />
-        <Btn size="sm" variant="ghost" onClick={onClose}><X size={15}/></Btn>
+    <div className="sd-sheet" style={{ background: COLORS.panel, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
+        <TextInput value={local.name} onChange={e => set({ name: e.target.value })} aria-label="Character name" style={{ fontFamily: FONTS.display, fontSize: 18, fontWeight: 700, background: "transparent", border: "none", maxWidth: 300, flex: 1, minWidth: 0 }} />
+        <Btn size="sm" variant="ghost" onClick={onClose} aria-label="Close sheet"><X size={18}/></Btn>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -95,15 +95,15 @@ function CharacterEditorSimple({ char, onChange, onDelete, onClose, onDuplicate 
         <Tag color={COLORS.dim}>Ki Rank {computeKiRank(local)}</Tag>
         <Btn size="sm" variant={tab === "growth" ? "gold" : "default"} style={{ marginLeft: "auto" }} onClick={() => setTab("growth")}><TrendingUp size={13}/> Growth</Btn>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+      <div className="sd-sheet-gauges" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
         <Gauge label="HP" value={local.hp} max={local.maxHp} color={COLORS.red} />
         <Gauge label="Ki" value={local.ki} max={local.maxKi} color={COLORS.blue} />
         <Gauge label="Stamina" value={local.stamina} max={local.maxStamina} color={COLORS.gold} />
       </div>
 
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: `1px solid ${COLORS.border}`, flexWrap: "wrap" }}>
+      <div className="sd-tabbar" role="tablist" style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: `1px solid ${COLORS.border}`, flexWrap: "wrap" }}>
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ padding: "8px 12px", background: "transparent", border: "none", borderBottom: `2px solid ${tab === t ? COLORS.gold : "transparent"}`, color: tab === t ? COLORS.gold : COLORS.muted, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>{TAB_LABELS[t]}</button>
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ padding: "10px 12px", whiteSpace: "nowrap", background: "transparent", border: "none", borderBottom: `2px solid ${tab === t ? COLORS.gold : "transparent"}`, color: tab === t ? COLORS.gold : COLORS.muted, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>{TAB_LABELS[t]}</button>
         ))}
       </div>
 
@@ -182,7 +182,7 @@ function CharactersTab() {
 
   if (chars === null) return <LoadingBlock />;
   const updateChar = (updated) => persist(chars.map(c => c.id === updated.id ? updated : c));
-  const deleteChar = (id) => { persist(chars.filter(c => c.id !== id)); setOpenId(null); };
+  const deleteChar = (id) => { const gone = chars.find(c => c.id === id); undoable(`Deleted ${(gone && gone.name) || "character"}`, ["characters_v2"], () => persist(chars.filter(c => c.id !== id))); setOpenId(null); };
   // The copy lands right after the original and opens.
   const duplicate = (c) => { const copy = duplicateChar(c); const i = chars.findIndex(x => x.id === c.id); persist([...chars.slice(0, i + 1), copy, ...chars.slice(i + 1)]); setOpenId(copy.id); };
   const openChar = chars.find(c => c.id === openId);

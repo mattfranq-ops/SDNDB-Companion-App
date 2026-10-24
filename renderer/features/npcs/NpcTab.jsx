@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Plus, Sparkles } from "lucide-react";
-import { _pendingNav, emitRoll, onNav } from "../../app/bus.js";
+import { _pendingNav, emitRoll, onNav, undoable } from "../../app/bus.js";
 import { NPC_TIERS } from "../../data/book-tables.js";
 import { NPC_POOLS } from "../../data/name-pools.js";
 import { abilityMod } from "../../engine/core.js";
@@ -55,7 +55,7 @@ function NpcTab() {
   };
 
   const addAndOpen = (n) => { persist([migrateNpc(n), ...npcs]); setOpenId(n.id); setMode(null); };
-  const remove = (id) => { persist(npcs.filter(n => n.id !== id)); setOpenId(null); };
+  const remove = (id) => { const gone = npcs.find(n => n.id === id); undoable(`Deleted ${(gone && gone.name) || "NPC"}`, ["npcs_v2"], () => persist(npcs.filter(n => n.id !== id))); setOpenId(null); };
   const update = (id, patch) => persist(npcs.map(n => n.id === id ? { ...n, ...patch } : n));
   const open = npcs.find(n => n.id === openId);
   const openNpc = open ? migrateNpc(open) : null;

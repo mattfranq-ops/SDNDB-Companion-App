@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { notify } from "../../app/bus.js";
 import { ClipboardList, Dices, Download, Plus, Table2, Trash2, Upload, X } from "lucide-react";
 import { BOOK_TABLES, BOUNTY_TIERS, DOWNTIME_ACTIVITIES, GAMBLING_GAMES, MAX_TRAINING_BOONS_PER_RANK, TRAINING_ARC_STYLES, TRAINING_BOON_SPENDS } from "../../data/book-tables.js";
 import { NPC_POOLS } from "../../data/name-pools.js";
@@ -90,7 +91,7 @@ function CustomTablesTab() {
   const importFile = (e) => {
     const f = e.target.files[0]; if (!f) return;
     const reader = new FileReader();
-    reader.onload = () => { try { const data = JSON.parse(reader.result); persist([...tables, { ...blankCustomTable(), ...data, id: uid() }]); } catch { alert("Couldn't read that file."); } };
+    reader.onload = () => { try { const data = JSON.parse(reader.result); persist([...tables, { ...blankCustomTable(), ...data, id: uid() }]); } catch { notify("Couldn't read that file."); } };
     reader.readAsText(f);
   };
 

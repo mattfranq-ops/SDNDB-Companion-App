@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { notify } from "../../app/bus.js";
 import { ArrowLeft, Check, Crown, Dices, Download, Globe2, Hexagon, Home as HomeIcon, MapPin, Minus, Orbit, Plus, Radio, Rocket, RotateCcw, Search, ShieldHalf, Shuffle, Sparkles, Trash2, TrendingUp, Upload, Wrench, X } from "lucide-react";
 import { FACTION_COLORS, FACTION_ROOTS, GALAXY_ERAS, GALAXY_SIZES, GRAVITY_EXTREME, HEX_CELLS, HEX_DX, HEX_R, INFLUENCE_ACTIONS, PLANET_CLASSES, SEASONS, SPIRAL_ARMS, SPIRAL_RIN, SPIRAL_ROUT, SPIRAL_TURNS, STAR_TRAITS, TERRAFORM_INF, TERRAFORM_ZENI, UNI_ECONOMIES, UNI_GOVERNMENTS, UNI_STABILITY, UNI_STARS, UNI_SYS_ROOTS, UNI_TECH, UNI_WEALTH, blankPlanet, clampIdx, classWeather, ensureGalaxyLayout, extremeGravityFlavor, generateGalaxy, generatePlanet, gravityBand, gravityColor, habColor, hexPoints, influencePenalty, newRandomSystem, planetClass, snapOne, spiralPositions, stabilityColor, starTrait, uniName, wealthColor, weatherPool, withPenalty } from "../../engine/universe.js";
 import { pick, uid } from "../../lib/dice.js";
@@ -206,7 +207,7 @@ function GalaxyForge({ onGenerate }) {
   const importGalaxy = (e) => {
     const f = e.target.files[0]; if (!f) return;
     const reader = new FileReader();
-    reader.onload = () => { try { const g = JSON.parse(reader.result); if (!Array.isArray(g.systems)) throw 0; onGenerate(ensureGalaxyLayout(g)); } catch { alert("Couldn't read that galaxy file — expected an exported galaxy JSON."); } };
+    reader.onload = () => { try { const g = JSON.parse(reader.result); if (!Array.isArray(g.systems)) throw 0; onGenerate(ensureGalaxyLayout(g)); } catch { notify("Couldn't read that galaxy file — expected an exported galaxy JSON."); } };
     reader.readAsText(f); e.target.value = "";
   };
   return (
@@ -574,7 +575,7 @@ function GalaxyMap({ galaxy, characters, onChange, isDM }) {
   const importGalaxy = (e) => {
     const f = e.target.files[0]; if (!f) return;
     const reader = new FileReader();
-    reader.onload = () => { try { const g = JSON.parse(reader.result); if (!Array.isArray(g.systems)) throw 0; onChange(ensureGalaxyLayout(g)); } catch { alert("Couldn't read that galaxy file — expected an exported galaxy JSON."); } };
+    reader.onload = () => { try { const g = JSON.parse(reader.result); if (!Array.isArray(g.systems)) throw 0; onChange(ensureGalaxyLayout(g)); } catch { notify("Couldn't read that galaxy file — expected an exported galaxy JSON."); } };
     reader.readAsText(f); e.target.value = "";
   };
   // Players (fog of war) only see systems the DM has revealed; the DM sees all.

@@ -37,7 +37,30 @@ function globalCss() {
       main [style*="grid-template-columns: repeat(4"], main [style*="grid-template-columns: repeat(5"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
       main [style*="grid-template-columns: minmax(2"] { grid-template-columns: minmax(0, 1fr) !important; }
       .vitals-body > :first-child { max-width: 300px; width: 100%; margin: 0 auto; }
+      /* Phones: chrome gets out of the way so the sheet starts near the top. */
+      .sd-main { padding: 12px 10px 92px !important; }
+      .sd-appheader { padding: 8px 12px !important; }
+      .sd-appheader-sub, .sd-banner-sub { display: none; }
+      .sd-banner { margin-bottom: 10px !important; }
+      .sd-banner-inner { padding: 10px 14px 10px 16px !important; }
+      .sd-sheet { padding: 12px !important; }
+      .sd-tabbar { flex-wrap: nowrap !important; overflow-x: auto; }
+      /* The map handle becomes a round button above the bottom nav. */
+      .sd-maptab:not(.open) { top: auto !important; bottom: calc(76px + env(safe-area-inset-bottom)) !important; right: 12px !important; transform: none !important;
+        border-radius: 50% !important; border-right: 1px solid ${COLORS.border} !important; width: 48px; height: 48px; padding: 0 !important; justify-content: center; }
+      .sd-maptab:not(.open) > span { writing-mode: horizontal-tb !important; font-size: 9px !important; }
+      .sd-maptab:not(.open) > svg { display: none; }
     }
+    /* Touch screens: every control is at least a fingertip tall, and inputs use
+       16px text so iPhones don't zoom in when one is tapped. */
+    @media (pointer: coarse) {
+      main button, main select, [role=dialog] button { min-height: 36px; }
+      main button:has(> svg:only-child) { min-width: 36px; justify-content: center; }
+      main select, main input:not([type=checkbox]):not([type=radio]), main textarea { min-height: 38px; font-size: 16px !important; }
+      main input[type=checkbox], main input[type=radio] { width: 20px; height: 20px; }
+    }
+    /* HP / Ki / Stamina stay in view under the app bar while the sheet scrolls. */
+    .sd-sheet-gauges { position: sticky; top: 49px; z-index: 20; background: ${COLORS.panel}; padding: 8px 0 6px; margin-top: -8px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
     }
